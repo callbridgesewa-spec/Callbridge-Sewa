@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
+import ProspectsDetailsPage from './pages/admin/ProspectsDetailsPage'
 import UserDashboard from './pages/UserDashboard'
 import UnderConstruction from './pages/UnderConstruction'
 import ProtectedRoute from './routes/ProtectedRoute'
@@ -23,7 +24,7 @@ function App() {
         >
           <Route index element={<AdminDashboard />} />
           <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="prospects-details" element={<UnderConstruction section="Prospects Details" />} />
+          <Route path="prospects-details" element={<ProspectsDetailsPage />} />
           <Route path="nominal-roll" element={<UnderConstruction section="Nominal Roll" />} />
           <Route path="jatha-record" element={<UnderConstruction section="Jatha Record" />} />
           <Route path="visit-data" element={<UnderConstruction section="Visit Data" />} />

@@ -67,6 +67,16 @@ Stores the dashboard badge counts.
 You can optionally create a single initial document with ID `badge-counts` and initial numeric values.  
 If you don’t, the app will start with built-in default values and create a document on first save.
 
+#### 3.4 Prospects Storage Bucket (optional)
+
+Stores imported Excel files for prospects.
+
+1. In Appwrite console, go to **Storage**.
+2. Click **Create Bucket**.
+3. Name it (e.g. `prospects`) and note its **Bucket ID**.
+4. Set permissions: allow **create** and **read** for admin users.
+5. Add `VITE_APPWRITE_PROSPECTS_BUCKET_ID` to your `.env`.
+
 ---
 
 ### 4. Authentication & Roles Model
@@ -94,3 +104,4 @@ VITE_APPWRITE_PROJECT_ID=YOUR_PROJECT_ID
 VITE_APPWRITE_DATABASE_ID=YOUR_DATABASE_ID
 VITE_APPWRITE_BADGE_COLLECTION_ID=YOUR_BADGE_COLLECTION_ID
 VITE_APPWRITE_USERS_COLLECTION_ID=YOUR_USERS_COLLECTION_ID
+VITE_APPWRITE_PROSPECTS_BUCKET_ID=YOUR_PROSPECTS_BUCKET_ID
