@@ -495,19 +495,19 @@ function ProspectsDetailsPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3 px-2 py-3 sm:space-y-5 sm:px-0 sm:py-0">
       <header>
-        <h1 className="text-xl font-semibold text-slate-900">Prospects Details</h1>
+        <h1 className="text-base font-semibold text-slate-900 sm:text-xl">Prospects Details</h1>
       </header>
 
-      <div className="rounded-xl bg-white p-4 shadow-sm">
+      <div className="overflow-hidden rounded-lg bg-white p-2.5 shadow-sm sm:rounded-xl sm:p-4">
         {/* Search and actions */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <div className="flex flex-1 flex-wrap items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:flex-wrap sm:items-center">
             <select
               value={searchBy}
               onChange={(e) => setSearchBy(e.target.value)}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+              className="w-full rounded-md border border-slate-200 px-2.5 py-2 text-xs text-slate-700 outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 sm:w-auto sm:rounded-lg sm:px-3 sm:text-sm"
             >
               {SEARCH_BY_OPTIONS.map((opt) => (
                 <option key={opt} value={opt}>
@@ -515,7 +515,7 @@ function ProspectsDetailsPage() {
                 </option>
               ))}
             </select>
-            <div className="relative flex-1 min-w-[180px]">
+            <div className="relative w-full sm:min-w-[180px] sm:flex-1">
               <svg
                 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
                 fill="none"
@@ -529,17 +529,17 @@ function ProspectsDetailsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search..."
-                className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-3 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+                className="w-full rounded-md border border-slate-200 py-2 pl-8 pr-2 text-xs outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 sm:rounded-lg sm:pl-9 sm:pr-3 sm:text-sm"
               />
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 sm:flex-nowrap">
             <button
               type="button"
               onClick={() => setAddModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-900"
+              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-slate-800 px-3 py-2 text-xs font-medium text-white transition hover:bg-slate-900 sm:flex-initial sm:px-4 sm:text-sm"
             >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
               Add Prospect
@@ -555,9 +555,9 @@ function ProspectsDetailsPage() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={importing}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
+              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60 sm:flex-initial sm:px-4 sm:text-sm"
             >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
               {importing ? 'Importing…' : 'Import Excel'}
@@ -565,9 +565,9 @@ function ProspectsDetailsPage() {
             <button
               type="button"
               onClick={handleExportExcel}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 sm:flex-initial sm:px-4 sm:text-sm"
             >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
               Export Excel
@@ -582,36 +582,37 @@ function ProspectsDetailsPage() {
         )}
 
         {/* Tabs */}
-        <div className="mt-6 flex flex-col gap-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex rounded-lg border border-slate-200 bg-slate-50/50 p-1">
+        <div className="mt-3 flex flex-col gap-2 sm:mt-6 sm:gap-4">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="flex w-full min-w-0 rounded-md border border-slate-200 bg-slate-50/50 p-0.5 sm:w-auto sm:rounded-lg sm:p-1">
               <button
                 type="button"
                 onClick={() => { setActiveTab('all'); setSelectedIds(new Set()) }}
-                className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition ${
+                className={`flex flex-1 items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition sm:flex-initial sm:px-4 sm:py-2 sm:gap-2 sm:text-sm ${
                   activeTab === 'all'
                     ? 'bg-white text-slate-900 shadow-sm'
                     : 'text-slate-600 hover:text-slate-800'
                 }`}
               >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
                 </svg>
-                All Prospects
+                <span className="truncate">All Prospects</span>
               </button>
               <button
                 type="button"
                 onClick={() => { setActiveTab('assigned'); setSelectedIds(new Set()) }}
-                className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition ${
+                className={`flex flex-1 items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition sm:flex-initial sm:px-4 sm:py-2 sm:gap-2 sm:text-sm ${
                   activeTab === 'assigned'
                     ? 'bg-sky-100 text-sky-900 shadow-sm'
                     : 'text-slate-600 hover:text-slate-800'
                 }`}
               >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Assigned to Users
+                <span className="truncate sm:hidden">Assigned</span>
+                <span className="hidden truncate sm:inline">Assigned to Users</span>
               </button>
             </div>
             {activeTab === 'assigned' && assignedUsers.length > 0 && (
@@ -637,14 +638,14 @@ function ProspectsDetailsPage() {
 
         {/* Assign bar — appears when one or more prospects are selected */}
         {selectedIds.size > 0 && (
-          <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3">
-            <span className="text-sm font-medium text-sky-900">
-              {selectedIds.size} prospect{selectedIds.size !== 1 ? 's' : ''} selected
+          <div className="mt-2 flex flex-col gap-2 rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-2 sm:mt-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:px-4 sm:py-3">
+            <span className="text-xs font-medium text-sky-900 sm:text-sm">
+              {selectedIds.size} selected
             </span>
             <select
               value={assignToUser}
               onChange={(e) => setAssignToUser(e.target.value)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400"
+              className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-slate-400 sm:w-auto sm:rounded-lg sm:px-3 sm:py-2 sm:text-sm"
               aria-label="Assign or unassign"
             >
               <option value="">Choose action…</option>
@@ -661,11 +662,12 @@ function ProspectsDetailsPage() {
                 <option value="" disabled>No users — add users from Dashboard</option>
               )}
             </select>
+            <div className="flex flex-wrap gap-1.5 sm:flex-nowrap sm:gap-2">
             <button
               type="button"
               onClick={handleAssign}
               disabled={!assignToUser || assigning || (assignToUser !== '__UNASSIGN__' && assignableUsers.length === 0)}
-              className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition disabled:opacity-60 ${
+              className={`flex-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-white transition disabled:opacity-60 sm:flex-initial sm:rounded-lg sm:px-4 sm:py-2 sm:text-sm ${
                 assignToUser === '__UNASSIGN__'
                   ? 'bg-orange-600 hover:bg-orange-700'
                   : 'bg-slate-800 hover:bg-slate-900'
@@ -679,31 +681,32 @@ function ProspectsDetailsPage() {
               type="button"
               onClick={openBulkDeleteConfirm}
               disabled={deleting}
-              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-60"
+              className="flex-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-red-500 transition hover:bg-red-700 disabled:opacity-60 sm:flex-initial sm:rounded-lg sm:px-4 sm:py-2 sm:text-sm"
             >
-              Delete selected
+              Delete
             </button>
             <button
               type="button"
               onClick={() => { setSelectedIds(new Set()); setAssignToUser(''); setError('') }}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50"
+              className="flex-1 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-600 transition hover:bg-slate-50 sm:flex-initial sm:rounded-lg sm:px-3 sm:py-2 sm:text-sm"
             >
-              Clear selection
+              Clear
             </button>
+            </div>
           </div>
         )}
 
         {/* Add Prospect Modal */}
         {addModalOpen && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-0 sm:items-center sm:p-4"
             role="dialog"
             aria-modal="true"
             aria-labelledby="add-prospect-title"
             onClick={closeAddModal}
           >
             <div
-              className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-xl bg-white shadow-xl"
+              className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-t-xl bg-white shadow-xl sm:rounded-xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
@@ -1020,8 +1023,8 @@ function ProspectsDetailsPage() {
           </div>
         )}
 
-        {/* Table */}
-        <div className={`mt-4 overflow-x-auto rounded-xl ${activeTab === 'assigned' ? 'border-2 border-sky-200 bg-sky-50/30 p-4' : ''}`}>
+        {/* Table / Cards */}
+        <div className={`mt-3 overflow-x-auto rounded-lg sm:overflow-visible sm:rounded-xl sm:mt-4 ${activeTab === 'assigned' ? 'border-2 border-sky-200 bg-sky-50/30 p-2 sm:p-4' : ''}`}>
           {loading ? (
             <div className="rounded-lg border border-slate-200 bg-slate-50/50 px-6 py-12 text-center">
               <p className="text-sm text-slate-500">Loading prospects…</p>
@@ -1038,69 +1041,133 @@ function ProspectsDetailsPage() {
               </p>
             </div>
           ) : (
-            <table className="w-full min-w-[700px] border-collapse text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/80">
-                  <th className="w-10 px-2 py-3">
+            <>
+              {/* Mobile card view */}
+              <div className="flex flex-col gap-2 md:hidden">
+                {filteredProspects.length > 0 && (
+                  <label className="flex cursor-pointer items-center gap-2 rounded-md border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-xs text-slate-700">
                     <input
                       type="checkbox"
-                      checked={filteredProspects.length > 0 && selectedIds.size >= filteredProspects.length}
+                      checked={selectedIds.size >= filteredProspects.length}
                       onChange={toggleSelectAll}
-                      className="h-4 w-4 rounded border-slate-300 text-slate-700 focus:ring-slate-400"
-                      aria-label="Select all"
+                      className="h-3.5 w-3.5 rounded border-slate-300 text-slate-700 focus:ring-slate-400"
                     />
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-slate-700">Name</th>
-                  <th className="px-4 py-3 font-semibold text-slate-700">Address</th>
-                  <th className="px-4 py-3 font-semibold text-slate-700">Phone Number</th>
-                  <th className="px-4 py-3 font-semibold text-slate-700">Batch Number</th>
-                  <th className="px-4 py-3 font-semibold text-slate-700">Assigned To</th>
-                  <th className="px-4 py-3 font-semibold text-slate-700">Blood Group</th>
-                  <th className="px-4 py-3 font-semibold text-slate-700">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+                    Select all
+                  </label>
+                )}
                 {filteredProspects.map((p) => (
-                  <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50/50">
-                    <td className="w-10 px-2 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(p.id)}
-                        onChange={() => toggleSelect(p.id)}
-                        className="h-4 w-4 rounded border-slate-300 text-slate-700 focus:ring-slate-400"
-                        aria-label={`Select ${p.name || 'prospect'}`}
-                      />
-                    </td>
-                    <td className="px-4 py-3 font-medium text-slate-900">{p.name || '-'}</td>
-                    <td className="px-4 py-3 text-slate-600">{p.address || '-'}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1.5 text-slate-600">
-                        <svg className="h-3.5 w-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div
+                    key={p.id}
+                    className={`flex items-start gap-2 rounded-lg border p-2 transition sm:gap-3 sm:p-3 ${
+                      selectedIds.has(p.id) ? 'border-sky-300 bg-sky-50/50' : 'border-slate-200 bg-white'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(p.id)}
+                      onChange={() => toggleSelect(p.id)}
+                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-slate-700 focus:ring-slate-400 sm:mt-1 sm:h-5 sm:w-5"
+                      aria-label={`Select ${p.name || 'prospect'}`}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-slate-900 sm:text-base">{p.name || '-'}</p>
+                      <p className="mt-0.5 truncate text-xs text-slate-600">{p.address || '-'}</p>
+                      <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-600">
+                        <svg className="h-3 w-3 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                         </svg>
                         {p.phoneNumber || '-'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{p.batchNumber || '-'}</td>
-                    <td className="px-4 py-3 text-slate-600">{p.assignedTo || '-'}</td>
-                    <td className="px-4 py-3 text-slate-600">{p.bloodGroup || '-'}</td>
-                    <td className="px-4 py-3">
-                      <button
-                        type="button"
-                        onClick={() => openDeleteConfirm(p.id)}
-                        disabled={deleting}
-                        className="rounded p-1.5 text-red-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                        aria-label={`Delete ${p.name || 'prospect'}`}
-                      >
-                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
+                      </p>
+                      <div className="mt-1 flex flex-wrap gap-1.5 text-[11px] text-slate-500">
+                        <span>B:{p.batchNumber || '-'}</span>
+                        <span>•</span>
+                        <span>{p.assignedTo || '-'}</span>
+                        <span>•</span>
+                        <span>{p.bloodGroup || '-'}</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => openDeleteConfirm(p.id)}
+                      disabled={deleting}
+                      className="shrink-0 rounded p-1.5 text-red-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                      aria-label={`Delete ${p.name || 'prospect'}`}
+                    >
+                      <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+
+              {/* Desktop table view */}
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full min-w-[700px] border-collapse text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50/80">
+                      <th className="w-10 px-2 py-3">
+                        <input
+                          type="checkbox"
+                          checked={filteredProspects.length > 0 && selectedIds.size >= filteredProspects.length}
+                          onChange={toggleSelectAll}
+                          className="h-4 w-4 rounded border-slate-300 text-slate-700 focus:ring-slate-400"
+                          aria-label="Select all"
+                        />
+                      </th>
+                      <th className="px-4 py-3 font-semibold text-slate-700">Name</th>
+                      <th className="px-4 py-3 font-semibold text-slate-700">Address</th>
+                      <th className="px-4 py-3 font-semibold text-slate-700">Phone Number</th>
+                      <th className="px-4 py-3 font-semibold text-slate-700">Batch Number</th>
+                      <th className="px-4 py-3 font-semibold text-slate-700">Assigned To</th>
+                      <th className="px-4 py-3 font-semibold text-slate-700">Blood Group</th>
+                      <th className="px-4 py-3 font-semibold text-slate-700">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProspects.map((p) => (
+                      <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50/50">
+                        <td className="w-10 px-2 py-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(p.id)}
+                            onChange={() => toggleSelect(p.id)}
+                            className="h-4 w-4 rounded border-slate-300 text-slate-700 focus:ring-slate-400"
+                            aria-label={`Select ${p.name || 'prospect'}`}
+                          />
+                        </td>
+                        <td className="px-4 py-3 font-medium text-slate-900">{p.name || '-'}</td>
+                        <td className="px-4 py-3 text-slate-600">{p.address || '-'}</td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center gap-1.5 text-slate-600">
+                            <svg className="h-3.5 w-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                            </svg>
+                            {p.phoneNumber || '-'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">{p.batchNumber || '-'}</td>
+                        <td className="px-4 py-3 text-slate-600">{p.assignedTo || '-'}</td>
+                        <td className="px-4 py-3 text-slate-600">{p.bloodGroup || '-'}</td>
+                        <td className="px-4 py-3">
+                          <button
+                            type="button"
+                            onClick={() => openDeleteConfirm(p.id)}
+                            disabled={deleting}
+                            className="rounded p-1.5 text-red-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                            aria-label={`Delete ${p.name || 'prospect'}`}
+                          >
+                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>
