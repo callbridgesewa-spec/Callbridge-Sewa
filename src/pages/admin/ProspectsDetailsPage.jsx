@@ -15,24 +15,147 @@ import { listUsers } from '../../services/usersService'
 
 const SEARCH_BY_OPTIONS = ['Name', 'Address', 'Phone Number', 'Batch Number', 'Assigned To', 'Blood Group']
 
-const HEADER_ALIASES = {
-  name: ['name', 'prospect', 'client', 'full name', 'fullname'],
-  address: ['address', 'location', 'addr'],
-  phoneNumber: ['phone', 'phone number', 'mobile', 'contact', 'tel'],
-  batchNumber: ['batch', 'batch number', 'batch no', 'batch no.'],
-  assignedTo: ['assigned to', 'assigned', 'agent', 'user'],
-  bloodGroup: ['blood group', 'blood', 'blood type', 'bg'],
+// --- Excel → Appwrite schema mapping (do not change schema) ---
+const SCHEMA_FIELDS = [
+  'fullName',
+  'address',
+  'mobile',
+  'bloodgroup',
+  'aadhar',
+  'dateOfBirth',
+  'age',
+  'guardian',
+  'batchNumber',
+  'gender',
+  'badgeStatus',
+  'emergencyContact',
+  'DeptFinalisedName',
+  'maritalStatus',
+  'locality',
+  'assignedTo',
+  'NamdaanDOI',
+  'namdaanInitiated',
+  'NamdaanInitiationBy',
+  'NamdaanInitiationPlace',
+]
+
+const REQUIRED_IMPORT_FIELDS = ['fullName', 'mobile']
+
+/** Normalize for matching: lowercase, remove spaces and non-alphanumeric */
+function normalizeHeader(str) {
+  return String(str ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
 }
 
-function findHeaderIndex(headers, aliases) {
-  for (let i = 0; i < headers.length; i++) {
-    const h = String(headers[i] ?? '').toLowerCase().trim()
-    if (aliases.some((a) => h.includes(a) || a.includes(h))) return i
+/**
+ * Excel column names (and truncated variants) → schema field.
+ * Keys are normalized (lowercase, no spaces/special chars).
+ * Includes short forms so "Blood Grou", "Aadhaar C", "Date of Bir", "Batch Num", "Dept Finali", "Marita" etc. match.
+ */
+const EXCEL_HEADER_TO_SCHEMA = {
+  name: 'fullName',
+  nam: 'fullName',
+  fullname: 'fullName',
+  prospect: 'fullName',
+  address: 'address',
+  location: 'address',
+  addr: 'address',
+  phone: 'mobile',
+  mobile: 'mobile',
+  phoneno: 'mobile',
+  contact: 'mobile',
+  bloodgroup: 'bloodgroup',
+  bloodgrou: 'bloodgroup',
+  blood: 'bloodgroup',
+  bg: 'bloodgroup',
+  aadhaarcard: 'aadhar',
+  aadhaarc: 'aadhar',
+  aadhar: 'aadhar',
+  dateofbirth: 'dateOfBirth',
+  dateofbir: 'dateOfBirth',
+  dob: 'dateOfBirth',
+  age: 'age',
+  guardianname: 'guardian',
+  guardian: 'guardian',
+  fathersname: 'guardian',
+  batchnumber: 'batchNumber',
+  batchnum: 'batchNumber',
+  batch: 'batchNumber',
+  gender: 'gender',
+  badgestatus: 'badgeStatus',
+  badgestat: 'badgeStatus',
+  emergencycontact: 'emergencyContact',
+  emergency: 'emergencyContact',
+  emerg: 'emergencyContact',
+  deptfinalisedname: 'DeptFinalisedName',
+  deptfinali: 'DeptFinalisedName',
+  department: 'DeptFinalisedName',
+  maritalstatus: 'maritalStatus',
+  marita: 'maritalStatus',
+  marital: 'maritalStatus',
+  rovillagetownlocalitydistrict: 'locality',
+  locality: 'locality',
+  village: 'locality',
+  namdaandoi: 'NamdaanDOI',
+  namdaaninitiated: 'namdaanInitiated',
+  namdaaninitiationby: 'NamdaanInitiationBy',
+  namdaaninitiationplace: 'NamdaanInitiationPlace',
+  // assignedTo is never set from import; admin assigns later
+}
+
+/** Also match headers that contain these keywords (after normalization) to handle variants like "Namadan Date of Initialisation" */
+const KEYWORD_TO_SCHEMA = [
+  ['dateofinitialisation', 'NamdaanDOI'],
+  ['dateofinitiation', 'NamdaanDOI'],
+  ['namadan', 'NamdaanDOI'],
+  ['namdaan', 'NamdaanDOI'],
+  ['doi', 'NamdaanDOI'],
+  ['initiationby', 'NamdaanInitiationBy'],
+  ['initiationplace', 'NamdaanInitiationPlace'],
+  ['initiated', 'namdaanInitiated'],
+]
+
+function matchExcelHeaderToSchemaField(excelHeader) {
+  const normalized = normalizeHeader(excelHeader)
+  if (!normalized) return null
+
+  // 1. Exact normalized match
+  if (EXCEL_HEADER_TO_SCHEMA[normalized]) return EXCEL_HEADER_TO_SCHEMA[normalized]
+
+  // 2. Prefix match: truncated header (e.g. "bloodgrou") is prefix of a known key, or key is prefix of header
+  if (normalized.length >= 2) {
+    for (const key of Object.keys(EXCEL_HEADER_TO_SCHEMA)) {
+      if (key.startsWith(normalized) || normalized.startsWith(key)) return EXCEL_HEADER_TO_SCHEMA[key]
+    }
   }
-  return -1
+
+  // 3. Normalized schema field name equals header
+  for (const field of SCHEMA_FIELDS) {
+    if (normalizeHeader(field) === normalized) return field
+  }
+
+  // 4. Header contains keyword from KEYWORD_TO_SCHEMA
+  for (const [keyword, schemaField] of KEYWORD_TO_SCHEMA) {
+    if (normalized.includes(keyword)) return schemaField
+  }
+
+  // 5. Header contains normalized schema field name
+  for (const field of SCHEMA_FIELDS) {
+    const nf = normalizeHeader(field)
+    if (nf && normalized.includes(nf)) return field
+  }
+
+  return null
 }
 
-function parseExcelFile(file) {
+/** Build auto-mapping: array of length headers.length, each element is schemaField string or null (unmapped) */
+function buildAutoMapping(excelHeaders) {
+  return excelHeaders.map((h) => matchExcelHeaderToSchemaField(h))
+}
+
+/** Parse Excel to raw headers and rows (no schema applied yet) */
+function parseExcelFileRaw(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = (e) => {
@@ -42,33 +165,12 @@ function parseExcelFile(file) {
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
         const json = XLSX.utils.sheet_to_json(firstSheet, { header: 1 })
         if (!json.length) {
-          resolve([])
+          resolve({ headers: [], rows: [] })
           return
         }
-        const headers = json[0].map((h) => String(h ?? ''))
-        const nameIdx = findHeaderIndex(headers, HEADER_ALIASES.name)
-        const addrIdx = findHeaderIndex(headers, HEADER_ALIASES.address)
-        const phoneIdx = findHeaderIndex(headers, HEADER_ALIASES.phoneNumber)
-        const batchIdx = findHeaderIndex(headers, HEADER_ALIASES.batchNumber)
-        const assignedIdx = findHeaderIndex(headers, HEADER_ALIASES.assignedTo)
-        const bloodIdx = findHeaderIndex(headers, HEADER_ALIASES.bloodGroup)
-
-        const rows = json.slice(1)
-        const prospects = rows
-          .filter((row) => row.some((cell) => cell != null && String(cell).trim()))
-          .map((row) => {
-            const get = (idx) => (idx >= 0 && row[idx] != null ? String(row[idx]).trim() : '')
-            return {
-              id: `p_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-              name: get(nameIdx) || (row[0] != null ? String(row[0]).trim() : ''),
-              address: get(addrIdx),
-              phoneNumber: get(phoneIdx),
-              batchNumber: get(batchIdx),
-              assignedTo: get(assignedIdx) || 'Unassigned',
-              bloodGroup: get(bloodIdx) || '-',
-            }
-          })
-        resolve(prospects)
+        const headers = json[0].map((h) => String(h ?? '').trim())
+        const rows = json.slice(1).filter((row) => row.some((cell) => cell != null && String(cell).trim()))
+        resolve({ headers, rows })
       } catch (err) {
         reject(err)
       }
@@ -78,27 +180,66 @@ function parseExcelFile(file) {
   })
 }
 
+/** Build prospect objects from raw rows using columnIndex → schemaField mapping. Unmapped columns are skipped. */
+function buildProspectsFromMapping(rows, columnMapping) {
+  return rows.map((row) => {
+    const prospect = {}
+    columnMapping.forEach((schemaField, colIndex) => {
+      if (!schemaField || schemaField === '__skip__') return
+      const raw = row[colIndex]
+      const value = raw == null || raw === '' ? '' : String(raw).trim()
+      prospect[schemaField] = value
+    })
+    return prospect
+  })
+}
+
 function getImportSignature(prospects) {
   const rows = prospects
-    .map((p) => [p.name, p.address, p.phoneNumber, p.batchNumber, p.assignedTo, p.bloodGroup].join('|'))
+    .map((p) => [(p.fullName ?? p.name), p.address, p.mobile, p.batchNumber, p.assignedTo, p.bloodgroup].join('|'))
     .sort()
   return rows.join('\n')
 }
 
-function exportToExcel(prospects) {
-  const headers = ['Name', 'Address', 'Phone Number', 'Batch Number', 'Assigned To', 'Blood Group']
-  const rows = prospects.map((p) => [
-    p.name,
-    p.address,
-    p.phoneNumber,
-    p.batchNumber,
-    p.assignedTo,
-    p.bloodGroup,
-  ])
+/** Full DB export: all prospect fields (no Appwrite system fields) */
+const FULL_EXPORT_COLUMNS = [
+  'fullName',
+  'address',
+  'mobile',
+  'bloodgroup',
+  'aadhar',
+  'dateOfBirth',
+  'age',
+  'guardian',
+  'batchNumber',
+  'gender',
+  'badgeStatus',
+  'emergencyContact',
+  'DeptFinalisedName',
+  'maritalStatus',
+  'locality',
+  'assignedTo',
+  'NamdaanDOI',
+  'namdaanInitiated',
+  'NamdaanInitiationBy',
+  'NamdaanInitiationPlace',
+]
+
+function exportToExcelFull(documents) {
+  const headers = FULL_EXPORT_COLUMNS.slice()
+  const rows = documents.map((doc) =>
+    FULL_EXPORT_COLUMNS.map((key) => {
+      const v = doc[key]
+      if (v === undefined || v === null) return ''
+      if (typeof v === 'string') return v
+      if (v instanceof Date) return v.toISOString()
+      return String(v)
+    }),
+  )
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Prospects')
-  XLSX.writeFile(wb, `prospects_${new Date().toISOString().slice(0, 10)}.xlsx`)
+  XLSX.writeFile(wb, `prospects_full_${new Date().toISOString().slice(0, 10)}.xlsx`)
 }
 
 const INITIAL_ADD_FORM = {
@@ -141,6 +282,7 @@ function ProspectsDetailsPage() {
   const [users, setUsers] = useState([])
   const [activeTab, setActiveTab] = useState('all')
   const [assignedFilterUser, setAssignedFilterUser] = useState('')
+  const [deleteConfirm, setDeleteConfirm] = useState(null) // { type: 'single', id } | { type: 'bulk', count } | null
   const fileInputRef = useRef(null)
 
   const loadProspects = useCallback(async () => {
@@ -239,38 +381,30 @@ function ProspectsDetailsPage() {
     }
   }
 
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this prospect? This action cannot be undone.')) {
-      return
-    }
-    setDeleting(true)
-    setError('')
-    try {
-      await deleteProspect(id)
-      await loadProspects()
-    } catch (err) {
-      setError(err.message || 'Failed to delete prospect.')
-    } finally {
-      setDeleting(false)
-    }
-  }
-
-  const handleBulkDelete = async () => {
+  const openDeleteConfirm = (id) => setDeleteConfirm({ type: 'single', id })
+  const openBulkDeleteConfirm = () => {
     if (selectedIds.size === 0) {
       setError('Select at least one prospect to delete.')
       return
     }
-    if (!confirm(`Are you sure you want to delete ${selectedIds.size} prospect(s)? This action cannot be undone.`)) {
-      return
-    }
+    setDeleteConfirm({ type: 'bulk', count: selectedIds.size })
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm) return
     setDeleting(true)
     setError('')
     try {
-      await deleteProspectsBulk([...selectedIds])
-      setSelectedIds(new Set())
+      if (deleteConfirm.type === 'single') {
+        await deleteProspect(deleteConfirm.id)
+      } else {
+        await deleteProspectsBulk([...selectedIds])
+        setSelectedIds(new Set())
+      }
       await loadProspects()
+      setDeleteConfirm(null)
     } catch (err) {
-      setError(err.message || 'Failed to delete prospects.')
+      setError(err.message || 'Failed to delete.')
     } finally {
       setDeleting(false)
     }
@@ -282,38 +416,56 @@ function ProspectsDetailsPage() {
     setImporting(true)
     setError('')
     try {
-      const parsed = await parseExcelFile(file)
-      const signature = getImportSignature(parsed)
+      const { headers, rows } = await parseExcelFileRaw(file)
+      if (!headers.length || !rows.length) {
+        setError('Excel file has no headers or data rows.')
+        e.target.value = ''
+        return
+      }
+      const columnMapping = buildAutoMapping(headers)
+      const mappedFields = new Set(columnMapping.filter(Boolean))
+      const missingRequired = REQUIRED_IMPORT_FIELDS.filter((r) => !mappedFields.has(r))
+      if (missingRequired.length) {
+        setError(
+          `Required columns not found: ${missingRequired.join(', ')}. Please add columns named "Name" (prospect name) and "Phone" (or "Mobile") in your Excel.`,
+        )
+        e.target.value = ''
+        return
+      }
+      const prospects = buildProspectsFromMapping(rows, columnMapping).map((p) => ({
+        ...p,
+        assignedTo: '', // leave unassigned; admin will assign later
+      }))
+      const signature = getImportSignature(prospects)
       if (importedSignatures.has(signature)) {
         setError('This Excel file has already been imported. No duplicate data added.')
-      } else {
-        try {
-          await createProspectsBulk(parsed)
-          setImportedSignatures((prev) => new Set(prev).add(signature))
-          await loadProspects()
-        } catch (dbErr) {
-          setError(dbErr.message || 'Failed to save prospects to database.')
-        }
-        try {
-          await uploadProspectExcel(file)
-        } catch {
-          // Storage upload optional; DB is primary
-        }
+        e.target.value = ''
+        return
       }
+      await createProspectsBulk(prospects)
+      setImportedSignatures((prev) => new Set(prev).add(signature))
+      await loadProspects()
     } catch (err) {
-      setError(err.message || 'Failed to import Excel.')
+      setError(err.message || 'Failed to import prospects.')
     } finally {
       setImporting(false)
       e.target.value = ''
     }
   }
 
-  const handleExportExcel = () => {
-    if (prospects.length === 0) {
-      setError('No prospects to export.')
-      return
+  const handleExportExcel = async () => {
+    setError('')
+    try {
+      const res = await listProspects()
+      const docs = res.documents || []
+      if (docs.length === 0) {
+        setError('No prospects to export.')
+        return
+      }
+      exportToExcelFull(docs)
+    } catch (err) {
+      setError(err.message || 'Failed to export prospects.')
     }
-    exportToExcel(filteredProspects)
   }
 
   const handleSubmitProspect = async (e) => {
@@ -435,7 +587,7 @@ function ProspectsDetailsPage() {
             <div className="flex rounded-lg border border-slate-200 bg-slate-50/50 p-1">
               <button
                 type="button"
-                onClick={() => setActiveTab('all')}
+                onClick={() => { setActiveTab('all'); setSelectedIds(new Set()) }}
                 className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition ${
                   activeTab === 'all'
                     ? 'bg-white text-slate-900 shadow-sm'
@@ -449,7 +601,7 @@ function ProspectsDetailsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab('assigned')}
+                onClick={() => { setActiveTab('assigned'); setSelectedIds(new Set()) }}
                 className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition ${
                   activeTab === 'assigned'
                     ? 'bg-sky-100 text-sky-900 shadow-sm'
@@ -462,15 +614,15 @@ function ProspectsDetailsPage() {
                 Assigned to Users
               </button>
             </div>
-            {activeTab === 'assigned' && (
+            {activeTab === 'assigned' && assignedUsers.length > 0 && (
               <div className="flex items-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2">
-                <label className="text-sm font-medium text-sky-800">Filter by user:</label>
+                <label className="text-sm font-medium text-sky-800">Show:</label>
                 <select
                   value={assignedFilterUser}
                   onChange={(e) => setAssignedFilterUser(e.target.value)}
                   className="rounded-md border border-sky-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400"
                 >
-                  <option value="">All assigned users</option>
+                  <option value="">All assigned prospects</option>
                   {assignedUsers.map((email) => (
                     <option key={email} value={email}>
                       {email}
@@ -483,29 +635,36 @@ function ProspectsDetailsPage() {
 
         </div>
 
-        {/* Assign bar */}
+        {/* Assign bar — appears when one or more prospects are selected */}
         {selectedIds.size > 0 && (
           <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3">
-            <span className="text-sm text-slate-700">{selectedIds.size} selected</span>
+            <span className="text-sm font-medium text-sky-900">
+              {selectedIds.size} prospect{selectedIds.size !== 1 ? 's' : ''} selected
+            </span>
             <select
               value={assignToUser}
               onChange={(e) => setAssignToUser(e.target.value)}
               className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400"
+              aria-label="Assign or unassign"
             >
-              <option value="">Select action...</option>
-              <option value="__UNASSIGN__" className="text-red-600">Unassign</option>
-              <optgroup label="Assign to user:">
-                {assignableUsers.map((email) => (
-                  <option key={email} value={email}>
-                    {email}
-                  </option>
-                ))}
-              </optgroup>
+              <option value="">Choose action…</option>
+              <option value="__UNASSIGN__">Unassign</option>
+              {assignableUsers.length > 0 ? (
+                <optgroup label="Assign to user">
+                  {assignableUsers.map((email) => (
+                    <option key={email} value={email}>
+                      {email}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : (
+                <option value="" disabled>No users — add users from Dashboard</option>
+              )}
             </select>
             <button
               type="button"
               onClick={handleAssign}
-              disabled={!assignToUser || assigning}
+              disabled={!assignToUser || assigning || (assignToUser !== '__UNASSIGN__' && assignableUsers.length === 0)}
               className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition disabled:opacity-60 ${
                 assignToUser === '__UNASSIGN__'
                   ? 'bg-orange-600 hover:bg-orange-700'
@@ -513,24 +672,20 @@ function ProspectsDetailsPage() {
               }`}
             >
               {assigning
-                ? assignToUser === '__UNASSIGN__'
-                  ? 'Unassigning…'
-                  : 'Assigning…'
-                : assignToUser === '__UNASSIGN__'
-                  ? 'Unassign'
-                  : 'Assign'}
+                ? (assignToUser === '__UNASSIGN__' ? 'Unassigning…' : 'Assigning…')
+                : (assignToUser === '__UNASSIGN__' ? 'Unassign' : 'Assign')}
             </button>
             <button
               type="button"
-              onClick={handleBulkDelete}
+              onClick={openBulkDeleteConfirm}
               disabled={deleting}
               className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-60"
             >
-              {deleting ? 'Deleting…' : 'Delete Selected'}
+              Delete selected
             </button>
             <button
               type="button"
-              onClick={() => setSelectedIds(new Set())}
+              onClick={() => { setSelectedIds(new Set()); setAssignToUser(''); setError('') }}
               className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50"
             >
               Clear selection
@@ -823,6 +978,48 @@ function ProspectsDetailsPage() {
           </div>
         )}
 
+        {/* Delete confirmation modal */}
+        {deleteConfirm && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-confirm-title"
+            onClick={() => setDeleteConfirm(null)}
+          >
+            <div
+              className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 id="delete-confirm-title" className="text-lg font-semibold text-slate-900">
+                {deleteConfirm.type === 'single' ? 'Delete prospect?' : `Delete ${deleteConfirm.count} prospect(s)?`}
+              </h2>
+              <p className="mt-2 text-sm text-slate-600">
+                {deleteConfirm.type === 'single'
+                  ? 'This prospect will be removed permanently. This cannot be undone.'
+                  : 'These prospects will be removed permanently. This cannot be undone.'}
+              </p>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirm(null)}
+                  className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteConfirm}
+                  disabled={deleting}
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-60"
+                >
+                  {deleting ? 'Deleting…' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Table */}
         <div className={`mt-4 overflow-x-auto rounded-xl ${activeTab === 'assigned' ? 'border-2 border-sky-200 bg-sky-50/30 p-4' : ''}`}>
           {loading ? (
@@ -832,11 +1029,11 @@ function ProspectsDetailsPage() {
           ) : filteredProspects.length === 0 ? (
             <div className={`rounded-lg px-6 py-12 text-center ${activeTab === 'assigned' ? 'border-2 border-dashed border-sky-200 bg-sky-50/50' : 'border border-dashed border-slate-200 bg-slate-50/50'}`}>
               <p className="text-sm font-medium text-slate-600">
-                {activeTab === 'assigned' ? 'No assigned prospects' : 'No prospects yet'}
+                {activeTab === 'assigned' ? 'No prospects assigned yet' : 'No prospects yet'}
               </p>
               <p className="mt-1 text-sm text-slate-500">
                 {activeTab === 'assigned'
-                  ? 'Switch to All Prospects, select rows, choose a user, and click Assign. Assigned data will appear here.'
+                  ? 'Go to All Prospects, select prospects, choose a user, and click Assign. They will appear here.'
                   : 'Import an Excel file or add a prospect to get started.'}
               </p>
             </div>
@@ -890,7 +1087,7 @@ function ProspectsDetailsPage() {
                     <td className="px-4 py-3">
                       <button
                         type="button"
-                        onClick={() => handleDelete(p.id)}
+                        onClick={() => openDeleteConfirm(p.id)}
                         disabled={deleting}
                         className="rounded p-1.5 text-red-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                         aria-label={`Delete ${p.name || 'prospect'}`}
