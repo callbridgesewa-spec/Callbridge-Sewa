@@ -74,6 +74,7 @@ function toDbProspect(p) {
     DeptFinalisedName: String(p.DeptFinalisedName ?? p.departmentName ?? '').trim() || '',
     maritalStatus: String(p.maritalStatus ?? 'N/A').trim() || 'N/A',
     locality: String(p.locality ?? '').trim() || '',
+    permanentAddress: String(p.permanentAddress ?? '').trim() || '',
     assignedTo: String(p.assignedTo ?? '').trim() || '',
     NamdaanDOI: String(p.NamdaanDOI ?? p.dateOfInitiation ?? '').trim() || '',
     namdaanInitiated: String(p.namdaanInitiated ?? (p.initiated ? 'yes' : 'no') ?? 'no').trim() || 'no',

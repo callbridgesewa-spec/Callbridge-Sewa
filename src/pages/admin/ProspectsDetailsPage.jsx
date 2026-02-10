@@ -13,12 +13,20 @@ import {
 } from '../../services/prospectsService'
 import { listUsers } from '../../services/usersService'
 
-const SEARCH_BY_OPTIONS = ['Name', 'Address', 'Phone Number', 'Batch Number', 'Assigned To', 'Blood Group']
+const SEARCH_BY_OPTIONS = [
+  'Name of Sewadar/Sewadarni',
+  'Address',
+  'Phone Number',
+  'Batch Number',
+  'Assigned To',
+  'Blood Group',
+]
 
 // --- Excel → Appwrite schema mapping (do not change schema) ---
 const SCHEMA_FIELDS = [
   'fullName',
   'address',
+  'permanentAddress',
   'mobile',
   'bloodgroup',
   'aadhar',
@@ -58,7 +66,10 @@ const EXCEL_HEADER_TO_SCHEMA = {
   nam: 'fullName',
   fullname: 'fullName',
   prospect: 'fullName',
+  nameofsewadarsewadarni: 'fullName',
   address: 'address',
+  residentialaddress: 'address',
+  residentialaddr: 'address',
   location: 'address',
   addr: 'address',
   phone: 'mobile',
@@ -101,6 +112,9 @@ const EXCEL_HEADER_TO_SCHEMA = {
   namdaaninitiated: 'namdaanInitiated',
   namdaaninitiationby: 'NamdaanInitiationBy',
   namdaaninitiationplace: 'NamdaanInitiationPlace',
+  permanentaddress: 'permanentAddress',
+  permaddr: 'permanentAddress',
+  permanantaddress: 'permanentAddress',
   // assignedTo is never set from import; admin assigns later
 }
 
@@ -205,6 +219,7 @@ function getImportSignature(prospects) {
 const FULL_EXPORT_COLUMNS = [
   'fullName',
   'address',
+  'permanentAddress',
   'mobile',
   'bloodgroup',
   'aadhar',
@@ -225,8 +240,45 @@ const FULL_EXPORT_COLUMNS = [
   'NamdaanInitiationPlace',
 ]
 
+const FULL_EXPORT_HEADERS = {
+  fullName: 'Name of Sewadar/Sewadarni',
+  address: 'Residential Address',
+  permanentAddress: 'Permanent Address',
+  mobile: 'Phone Number',
+  bloodgroup: 'Blood Group',
+  aadhar: 'Aadhar Number',
+  dateOfBirth: 'Date of Birth',
+  age: 'Age',
+  guardian: "Father's/Husband's Name",
+  batchNumber: 'Batch Number',
+  gender: 'Gender',
+  badgeStatus: 'Badge Status',
+  emergencyContact: 'Emergency Contact Number',
+  DeptFinalisedName: 'Department Finalised Name',
+  maritalStatus: 'Marital Status',
+  locality: 'R/O Village/Town/Locality/District',
+  assignedTo: 'Assigned To',
+  NamdaanDOI: 'Date of Initiation (DOI)',
+  namdaanInitiated: 'Initiated',
+  NamdaanInitiationBy: 'Initiation By',
+  NamdaanInitiationPlace: 'Initiation Place',
+}
+
+function calculateAgeFromDob(dateStr) {
+  if (!dateStr) return ''
+  const dob = new Date(dateStr)
+  if (Number.isNaN(dob.getTime())) return ''
+  const today = new Date()
+  let age = today.getFullYear() - dob.getFullYear()
+  const m = today.getMonth() - dob.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+    age--
+  }
+  return age >= 0 ? String(age) : ''
+}
+
 function exportToExcelFull(documents) {
-  const headers = FULL_EXPORT_COLUMNS.slice()
+  const headers = FULL_EXPORT_COLUMNS.map((key) => FULL_EXPORT_HEADERS[key] || key)
   const rows = documents.map((doc) =>
     FULL_EXPORT_COLUMNS.map((key) => {
       const v = doc[key]
@@ -254,9 +306,10 @@ const INITIAL_ADD_FORM = {
   aadharNumber: '',
   dateOfBirth: '',
   emergencyContact: '',
-  alternatePhone: '',
+  bloodgroup: '',
   locality: '',
   fullAddress: '',
+  permanentAddress: '',
   maritalStatus: 'N/A',
   initiated: false,
   dateOfInitiation: '',
@@ -266,7 +319,7 @@ const INITIAL_ADD_FORM = {
 
 function ProspectsDetailsPage() {
   const [prospects, setProspects] = useState([])
-  const [searchBy, setSearchBy] = useState('Name')
+  const [searchBy, setSearchBy] = useState('Name of Sewadar/Sewadarni')
   const [searchQuery, setSearchQuery] = useState('')
   const [importing, setImporting] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -319,7 +372,7 @@ function ProspectsDetailsPage() {
     const q = searchQuery.trim().toLowerCase()
     if (!q) return true
     const field = {
-      Name: p.name,
+      'Name of Sewadar/Sewadarni': p.name,
       Address: p.address,
       'Phone Number': p.phoneNumber,
       'Batch Number': p.batchNumber,
@@ -427,7 +480,9 @@ function ProspectsDetailsPage() {
       const missingRequired = REQUIRED_IMPORT_FIELDS.filter((r) => !mappedFields.has(r))
       if (missingRequired.length) {
         setError(
-          `Required columns not found: ${missingRequired.join(', ')}. Please add columns named "Name" (prospect name) and "Phone" (or "Mobile") in your Excel.`,
+          `Required columns not found: ${missingRequired.join(
+            ', ',
+          )}. Please add columns named "Name of Sewadar/Sewadarni" (prospect name) and "Phone" (or "Mobile") in your Excel.`,
         )
         e.target.value = ''
         return
@@ -730,7 +785,7 @@ function ProspectsDetailsPage() {
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Profile Details</p>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-600">Name of Sevadaar/Sevadarni *</label>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">Name of Sewadar/Sewadarni *</label>
                     <input
                       type="text"
                       required
@@ -766,12 +821,12 @@ function ProspectsDetailsPage() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-600">Badge ID</label>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">Batch Number</label>
                     <input
                       type="text"
                       value={addForm.badgeId}
                       onChange={updateAddForm('badgeId')}
-                      placeholder="Enter badge ID"
+                      placeholder="Enter batch number"
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
                     />
                   </div>
@@ -809,9 +864,9 @@ function ProspectsDetailsPage() {
                     <input
                       type="text"
                       value={addForm.age}
-                      onChange={updateAddForm('age')}
+                      readOnly
                       placeholder="Age (auto-calculated)"
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none"
                     />
                   </div>
                   <div>
@@ -837,10 +892,17 @@ function ProspectsDetailsPage() {
                   <div>
                     <label className="mb-1 block text-xs font-medium text-slate-600">Date of Birth</label>
                     <input
-                      type="text"
+                      type="date"
                       value={addForm.dateOfBirth}
-                      onChange={updateAddForm('dateOfBirth')}
-                      placeholder="dd/mm/yyyy"
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setAddForm((f) => ({
+                          ...f,
+                          dateOfBirth: value,
+                          age: calculateAgeFromDob(value),
+                        }))
+                      }}
+                      max={new Date().toISOString().slice(0, 10)}
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
                     />
                   </div>
@@ -855,12 +917,12 @@ function ProspectsDetailsPage() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-600">Alternate Phone Number</label>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">Blood Group</label>
                     <input
                       type="text"
-                      value={addForm.alternatePhone}
-                      onChange={updateAddForm('alternatePhone')}
-                      placeholder="Alternate contact"
+                      value={addForm.bloodgroup}
+                      onChange={updateAddForm('bloodgroup')}
+                      placeholder="e.g., A+, B-, O+, AB+"
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
                     />
                   </div>
@@ -889,11 +951,21 @@ function ProspectsDetailsPage() {
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="mb-1 block text-xs font-medium text-slate-600">Full Address</label>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">Residential Address</label>
                     <textarea
                       value={addForm.fullAddress}
                       onChange={updateAddForm('fullAddress')}
                       placeholder="Complete residential address"
+                      rows={3}
+                      className="w-full resize-y rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="mb-1 block text-xs font-medium text-slate-600">Permanent Address</label>
+                    <textarea
+                      value={addForm.permanentAddress}
+                      onChange={updateAddForm('permanentAddress')}
+                      placeholder="Permanent address (if different from residential)"
                       rows={3}
                       className="w-full resize-y rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
                     />
@@ -929,10 +1001,9 @@ function ProspectsDetailsPage() {
                       <div>
                         <label className="mb-1 block text-xs font-medium text-slate-600">Date of Initiation (DOI)</label>
                         <input
-                          type="text"
+                          type="date"
                           value={addForm.dateOfInitiation}
                           onChange={updateAddForm('dateOfInitiation')}
-                          placeholder="dd/mm/yyyy"
                           className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
                         />
                       </div>
@@ -1115,7 +1186,7 @@ function ProspectsDetailsPage() {
                           aria-label="Select all"
                         />
                       </th>
-                      <th className="px-4 py-3 font-semibold text-slate-700">Name</th>
+                      <th className="px-4 py-3 font-semibold text-slate-700">Name of Sewadar/Sewadarni</th>
                       <th className="px-4 py-3 font-semibold text-slate-700">Address</th>
                       <th className="px-4 py-3 font-semibold text-slate-700">Phone Number</th>
                       <th className="px-4 py-3 font-semibold text-slate-700">Batch Number</th>
