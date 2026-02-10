@@ -3,15 +3,63 @@ import { useOutletContext } from 'react-router-dom'
 import { fetchBadgeCounts, saveBadgeCounts } from '../../services/badgesService'
 import { createUser, listUsers, deleteUser } from '../../services/usersService'
 
+const BADGE_SERIES = [
+  { key: 'open', label: 'Open', color: '#f97316', colorClass: 'bg-orange-500', value: 0 },
+  { key: 'permanent', label: 'Permanent', colorClass: 'bg-teal-500', color: '#14b8a6', value: 0 },
+  { key: 'elderly', label: 'Elderly', colorClass: 'bg-slate-700', color: '#334155', value: 0 },
+  { key: 'sangat', label: 'Sangat', colorClass: 'bg-amber-500', color: '#f59e0b', value: 0 },
+  { key: 'newProspects', label: 'New Prospects', colorClass: 'bg-orange-400', color: '#fb923c', value: 0 },
+]
+
+function BadgePieChart({ counts }) {
+  const total = BADGE_SERIES.reduce(
+    (sum, s) => sum + (Number(counts[s.key]) || 0),
+    0
+  )
+
+  const background = useMemo(() => {
+    if (total === 0) {
+      return 'conic-gradient(#e2e8f0 0deg 360deg)'
+    }
+
+    let acc = 0
+    const stops = BADGE_SERIES.map((s) => {
+      const val = Number(counts[s.key]) || 0
+      const start = (acc / total) * 360
+      acc += val
+      const end = (acc / total) * 360
+      return `${s.color} ${start}deg ${end}deg`
+    })
+
+    return `conic-gradient(${stops.join(', ')})`
+  }, [counts, total])
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div
+        className="h-44 w-44 rounded-full border-4 border-white shadow-inner"
+        style={{ background }}
+      />
+      <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-[10px]">
+        {BADGE_SERIES.map((s) => (
+          <span key={s.key} className="flex items-center gap-1">
+            <span className={`h-2 w-2 rounded-full ${s.colorClass}`} />
+            {s.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+
 function BadgeBarChart({ counts }) {
   const series = useMemo(
-    () => [
-      { key: 'open', label: 'Open', color: 'bg-orange-500', value: Number(counts.open) || 0 },
-      { key: 'permanent', label: 'Permanent', color: 'bg-teal-500', value: Number(counts.permanent) || 0 },
-      { key: 'elderly', label: 'Elderly', color: 'bg-slate-700', value: Number(counts.elderly) || 0 },
-      { key: 'sangat', label: 'Sangat', color: 'bg-amber-500', value: Number(counts.sangat) || 0 },
-      { key: 'newProspects', label: 'New Prospects', color: 'bg-orange-400', value: Number(counts.newProspects) || 0 },
-    ],
+    () =>
+      BADGE_SERIES.map((s) => ({
+        ...s,
+        value: Number(counts[s.key]) || 0,
+      })),
     [counts],
   )
 
@@ -30,7 +78,7 @@ function BadgeBarChart({ counts }) {
             >
               <span className="mb-1 text-center text-xs font-semibold text-slate-700">{item.value}</span>
               <div
-                className={`w-full min-w-[24px] rounded-t ${item.color} transition-all`}
+                className={`w-full min-w-[24px] rounded-t ${item.colorClass} transition-all`}
                 style={{
                   height: Math.max(barHeight, 4),
                 }}
@@ -223,15 +271,20 @@ function AdminDashboard() {
       </header>
 
       {/* Top row: Badge Overview (chart) + Total Badges */}
-      <section className="grid gap-4 md:grid-cols-[2fr,1fr]">
-        {/* Badge Overview - large white card with bar chart */}
-        <div className="rounded-xl bg-white p-5 shadow-sm">
-          <div className="mb-3">
-            <h2 className="text-sm font-semibold text-slate-900">Badge Overview</h2>
-            <p className="mt-0.5 text-xs text-slate-500">Current distribution of various badges.</p>
-          </div>
+      <section className="grid gap-4 lg:grid-cols-3">
+        {/* Badge Overview - bar chart + pie chart */}
+        <div className="lg:col-span-2 rounded-xl bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-900">Badge Overview</h2>
           <BadgeBarChart counts={draft} />
         </div>
+
+        <div className="rounded-xl bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-900">
+            Badge Distribution
+          </h2>
+          <BadgePieChart counts={draft} />
+        </div>
+
 
         {/* Total Badges - white card */}
         <div className="rounded-xl bg-white p-5 shadow-sm">
@@ -255,10 +308,10 @@ function AdminDashboard() {
           aria-labelledby="badge-modal-title"
           onClick={closeBadgeModal}
         >
-        <div
-          className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl"
-          onClick={(e) => e.stopPropagation()}
-        >
+          <div
+            className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 id="badge-modal-title" className="text-lg font-semibold text-slate-900">
               Edit Badge Counts
             </h2>
