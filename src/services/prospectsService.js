@@ -26,7 +26,7 @@ function getAttrByKeyMatch(doc, ...targetKeys) {
 /** Convert Appwrite document to display format used in table */
 export function docToDisplay(doc) {
   if (!doc || typeof doc !== 'object') {
-    return { id: '', name: '-', address: '-', phoneNumber: '-', batchNumber: '-', assignedTo: 'Unassigned', bloodGroup: '-' }
+    return { id: '', name: '-', address: '-', phoneNumber: '-', badgeId: '-', assignedTo: 'Unassigned', bloodGroup: '-' }
   }
   const prospectName = getAttr(doc, 'fullName', 'fullname', 'FullName') || getAttrByKeyMatch(doc, 'fullName', 'fullname') || getAttr(doc, 'name', 'Name') || getAttrByKeyMatch(doc, 'name', 'Name') || '-'
   return {
@@ -34,7 +34,7 @@ export function docToDisplay(doc) {
     name: prospectName,
     address: getAttr(doc, 'address', 'Address') || getAttrByKeyMatch(doc, 'address', 'Address') || '-',
     phoneNumber: getAttr(doc, 'mobile', 'Mobile', 'phoneNumber', 'Phone') || getAttrByKeyMatch(doc, 'mobile', 'Mobile', 'phoneNumber', 'Phone') || '-',
-    batchNumber: getAttr(doc, 'batchNumber', 'BatchNumber') || getAttrByKeyMatch(doc, 'batchNumber', 'BatchNumber') || '-',
+    badgeId: getAttr(doc, 'badgeId', 'BadgeId') || getAttrByKeyMatch(doc, 'badgeId', 'BadgeId') || getAttr(doc, 'batchNumber', 'BatchNumber') || getAttrByKeyMatch(doc, 'batchNumber', 'BatchNumber') || '-',
     assignedTo: getAttr(doc, 'assignedTo', 'AssignedTo') || getAttrByKeyMatch(doc, 'assignedTo', 'AssignedTo') || 'Unassigned',
     bloodGroup: getAttr(doc, 'bloodgroup', 'bloodGroup', 'BloodGroup') || getAttrByKeyMatch(doc, 'bloodgroup', 'bloodGroup', 'BloodGroup') || '-',
   }
@@ -67,7 +67,7 @@ function toDbProspect(p) {
     dateOfBirth: String(p.dateOfBirth ?? '').trim() || '',
     age: String(p.age ?? '').trim() || '',
     guardian: String(p.guardian ?? p.fathersName ?? '').trim() || '',
-    batchNumber: String(p.batchNumber ?? p.badgeId ?? '').trim() || '',
+    badgeId: String(p.badgeId ?? p.batchNumber ?? '').trim() || '',
     gender: String(p.gender ?? 'Male').trim() || 'Male',
     badgeStatus: String(p.badgeStatus ?? 'N/A').trim() || 'N/A',
     emergencyContact: String(p.emergencyContact ?? '').trim() || '',

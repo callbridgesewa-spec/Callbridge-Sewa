@@ -17,7 +17,7 @@ const SEARCH_BY_OPTIONS = [
   'Name of Sewadar/Sewadarni',
   'Address',
   'Phone Number',
-  'Batch Number',
+  'Badge ID',
   'Assigned To',
   'Blood Group',
 ]
@@ -33,7 +33,7 @@ const SCHEMA_FIELDS = [
   'dateOfBirth',
   'age',
   'guardian',
-  'batchNumber',
+  'badgeId',
   'gender',
   'badgeStatus',
   'emergencyContact',
@@ -90,9 +90,11 @@ const EXCEL_HEADER_TO_SCHEMA = {
   guardianname: 'guardian',
   guardian: 'guardian',
   fathersname: 'guardian',
-  batchnumber: 'batchNumber',
-  batchnum: 'batchNumber',
-  batch: 'batchNumber',
+  batchnumber: 'badgeId',
+  batchnum: 'badgeId',
+  batch: 'badgeId',
+  badgeid: 'badgeId',
+  badge: 'badgeId',
   gender: 'gender',
   badgestatus: 'badgeStatus',
   badgestat: 'badgeStatus',
@@ -210,7 +212,7 @@ function buildProspectsFromMapping(rows, columnMapping) {
 
 function getImportSignature(prospects) {
   const rows = prospects
-    .map((p) => [(p.fullName ?? p.name), p.address, p.mobile, p.batchNumber, p.assignedTo, p.bloodgroup].join('|'))
+    .map((p) => [(p.fullName ?? p.name), p.address, p.mobile, p.badgeId, p.assignedTo, p.bloodgroup].join('|'))
     .sort()
   return rows.join('\n')
 }
@@ -226,7 +228,7 @@ const FULL_EXPORT_COLUMNS = [
   'dateOfBirth',
   'age',
   'guardian',
-  'batchNumber',
+  'badgeId',
   'gender',
   'badgeStatus',
   'emergencyContact',
@@ -250,7 +252,7 @@ const FULL_EXPORT_HEADERS = {
   dateOfBirth: 'Date of Birth',
   age: 'Age',
   guardian: "Father's/Husband's Name",
-  batchNumber: 'Batch Number',
+  badgeId: 'Badge ID',
   gender: 'Gender',
   badgeStatus: 'Badge Status',
   emergencyContact: 'Emergency Contact Number',
@@ -375,7 +377,7 @@ function ProspectsDetailsPage() {
       'Name of Sewadar/Sewadarni': p.name,
       Address: p.address,
       'Phone Number': p.phoneNumber,
-      'Batch Number': p.batchNumber,
+      'Badge ID': p.badgeId,
       'Assigned To': p.assignedTo,
       'Blood Group': p.bloodGroup,
     }[searchBy]
@@ -821,12 +823,12 @@ function ProspectsDetailsPage() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-600">Batch Number</label>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">Badge ID</label>
                     <input
                       type="text"
                       value={addForm.badgeId}
                       onChange={updateAddForm('badgeId')}
-                      placeholder="Enter batch number"
+                      placeholder="Enter badge ID"
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
                     />
                   </div>
@@ -1150,7 +1152,7 @@ function ProspectsDetailsPage() {
                         {p.phoneNumber || '-'}
                       </p>
                       <div className="mt-1 flex flex-wrap gap-1.5 text-[11px] text-slate-500">
-                        <span>B:{p.batchNumber || '-'}</span>
+                        <span>ID:{p.badgeId || '-'}</span>
                         <span>•</span>
                         <span>{p.assignedTo || '-'}</span>
                         <span>•</span>
@@ -1189,7 +1191,7 @@ function ProspectsDetailsPage() {
                       <th className="px-4 py-3 font-semibold text-slate-700">Name of Sewadar/Sewadarni</th>
                       <th className="px-4 py-3 font-semibold text-slate-700">Address</th>
                       <th className="px-4 py-3 font-semibold text-slate-700">Phone Number</th>
-                      <th className="px-4 py-3 font-semibold text-slate-700">Batch Number</th>
+                      <th className="px-4 py-3 font-semibold text-slate-700">Badge ID</th>
                       <th className="px-4 py-3 font-semibold text-slate-700">Assigned To</th>
                       <th className="px-4 py-3 font-semibold text-slate-700">Blood Group</th>
                       <th className="px-4 py-3 font-semibold text-slate-700">Actions</th>
@@ -1217,7 +1219,7 @@ function ProspectsDetailsPage() {
                             {p.phoneNumber || '-'}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-slate-600">{p.batchNumber || '-'}</td>
+                        <td className="px-4 py-3 text-slate-600">{p.badgeId || '-'}</td>
                         <td className="px-4 py-3 text-slate-600">{p.assignedTo || '-'}</td>
                         <td className="px-4 py-3 text-slate-600">{p.bloodGroup || '-'}</td>
                         <td className="px-4 py-3">
