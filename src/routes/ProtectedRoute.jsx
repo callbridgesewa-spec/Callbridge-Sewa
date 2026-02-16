@@ -21,7 +21,7 @@ function ProtectedRoute({ children, requiredRole }) {
   if (requiredRole && role !== requiredRole) {
     // Redirect to correct dashboard if logged in with different role
     if (role === 'admin') return <Navigate to="/admin/dashboard" replace />
-    if (role === 'user') return <Navigate to="/user" replace />
+    if (role === 'user') return <Navigate to="/user/prospects-details" replace />
     return <Navigate to="/login" replace />
   }
 

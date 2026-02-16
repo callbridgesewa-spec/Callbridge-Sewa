@@ -3,6 +3,7 @@ import LoginPage from './pages/LoginPage'
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import ProspectsDetailsPage from './pages/admin/ProspectsDetailsPage'
+import UserLayout from './pages/UserLayout'
 import UserDashboard from './pages/UserDashboard'
 import UnderConstruction from './pages/UnderConstruction'
 import ProtectedRoute from './routes/ProtectedRoute'
@@ -31,15 +32,21 @@ function App() {
           <Route path="add-prospects" element={<UnderConstruction section="Add Prospects" />} />
         </Route>
 
-        {/* User dashboard */}
+        {/* User routes */}
         <Route
           path="/user"
           element={
             <ProtectedRoute requiredRole="user">
-              <UserDashboard />
+              <UserLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<UserDashboard />} />
+          <Route path="prospects-details" element={<UserDashboard />} />
+          <Route path="nominal-roll" element={<UnderConstruction section="Nominal Roll" />} />
+          <Route path="jatha-record" element={<UnderConstruction section="Jatha Record" />} />
+          <Route path="visit-data" element={<UnderConstruction section="Visit Data" />} />
+        </Route>
 
         {/* Default redirect */}
         <Route path="*" element={<Navigate to="/login" replace />} />

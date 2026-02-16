@@ -1,3 +1,4 @@
+import { Query } from 'appwrite'
 import { databases, storage, APPWRITE_CONFIG } from './appwriteClient'
 
 /** Read attribute with optional fallback for different casing (Appwrite may return Name vs name) */
@@ -50,6 +51,23 @@ export async function listProspects() {
     return response
   } catch (error) {
     console.error('Failed to list prospects', error)
+    return { documents: [], total: 0 }
+  }
+}
+
+/** List prospects assigned to a specific user (by email) */
+export async function listProspectsAssignedTo(userEmail) {
+  const { databaseId, prospectsCollectionId } = APPWRITE_CONFIG
+  if (!databaseId || !prospectsCollectionId || !userEmail) {
+    return { documents: [], total: 0 }
+  }
+  try {
+    const response = await databases.listDocuments(databaseId, prospectsCollectionId, [
+      Query.equal('assignedTo', userEmail),
+    ])
+    return response
+  } catch (error) {
+    console.error('Failed to list assigned prospects', error)
     return { documents: [], total: 0 }
   }
 }

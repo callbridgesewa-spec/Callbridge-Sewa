@@ -17,6 +17,7 @@ export const APPWRITE_CONFIG = {
   usersCollectionId: import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID || '',
   prospectsBucketId: import.meta.env.VITE_APPWRITE_PROSPECTS_BUCKET_ID || '',
   prospectsCollectionId: import.meta.env.VITE_APPWRITE_PROSPECTS_COLLECTION_ID || '',
+  callLogsCollectionId: import.meta.env.VITE_APPWRITE_CALLLOGS_COLLECTION_ID || '',
 }
 
 export default client

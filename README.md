@@ -67,7 +67,27 @@ Stores the dashboard badge counts.
 You can optionally create a single initial document with ID `badge-counts` and initial numeric values.  
 If you don’t, the app will start with built-in default values and create a document on first save.
 
-#### 3.4 Prospects Storage Bucket (optional)
+#### 3.4 Call Logs Collection (for user-submitted call forms)
+
+Stores call form submissions from users/employees when they complete a call with an assigned prospect.
+
+1. In the same database, click **Create Collection**.
+2. Name it (e.g. `callLogs`) and note its **Collection ID**.
+3. Add attributes (all **string**, not required unless you want validation):
+   - `prospectId`
+   - `prospectName`
+   - `submittedBy`
+   - `callBack`
+   - `notInterest`
+   - `needToWork`
+   - `notes1`, `notes2`, `notes3`
+   - `nominalListSelect`
+   - `visitSelect`
+   - `freeSewa`
+   - `jathaDetails` (stores JSON string)
+4. Add `VITE_APPWRITE_CALLLOGS_COLLECTION_ID=callLogs` to your `.env`.
+
+#### 3.5 Prospects Storage Bucket (optional)
 
 Stores imported Excel files for prospects.
 
