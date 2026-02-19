@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { fetchBadgeCounts, saveBadgeCounts } from '../../services/badgesService'
 import { createUser, listUsers, deleteUser } from '../../services/usersService'
-import { listCallLogs } from '../../services/callLogsService'
 
 const BADGE_SERIES = [
   { key: 'open', label: 'Open', color: '#f97316', colorClass: 'bg-orange-500', value: 0 },
@@ -126,7 +125,6 @@ function AdminDashboard() {
       openUserModal,
       openExistingUsersModal,
       openAttendanceModal,
-      openCallLogsModal,
     })
     return () => setDashboardActions?.(null)
   }, [
@@ -244,28 +242,11 @@ function AdminDashboard() {
 
   const [existingUsersModalOpen, setExistingUsersModalOpen] = useState(false)
   const [attendanceModalOpen, setAttendanceModalOpen] = useState(false)
-  const [callLogsModalOpen, setCallLogsModalOpen] = useState(false)
-  const [callLogs, setCallLogs] = useState([])
-  const [callLogsLoading, setCallLogsLoading] = useState(false)
-  const [viewingLog, setViewingLog] = useState(null)
 
   function openAttendanceModal() {
     setAttendanceModalOpen(true)
   }
 
-  async function openCallLogsModal() {
-    setCallLogsModalOpen(true)
-    setViewingLog(null)
-    setCallLogsLoading(true)
-    try {
-      const res = await listCallLogs()
-      setCallLogs(res.documents || [])
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setCallLogsLoading(false)
-    }
-  }
 
   async function openExistingUsersModal() {
     setExistingUsersModalOpen(true)
@@ -576,117 +557,6 @@ function AdminDashboard() {
         </div>
       )}
 
-      {/* Call Logs modal - submitted forms from users */}
-      {callLogsModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="call-logs-modal-title"
-          onClick={() => setCallLogsModalOpen(false)}
-        >
-          <div
-            className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-xl bg-white shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
-              <h2 id="call-logs-modal-title" className="text-lg font-semibold text-slate-900">
-                Submitted Call Forms
-              </h2>
-              <button
-                type="button"
-                onClick={() => setCallLogsModalOpen(false)}
-                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
-                aria-label="Close"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto px-5 py-4">
-              {callLogsLoading ? (
-                <p className="py-8 text-center text-sm text-slate-500">Loading call logs…</p>
-              ) : viewingLog ? (
-                <div className="space-y-4">
-                  <button
-                    type="button"
-                    onClick={() => setViewingLog(null)}
-                    className="text-sm font-medium text-sky-600 hover:text-sky-700"
-                  >
-                    ← Back to list
-                  </button>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4 text-sm">
-                    <p className="font-semibold text-slate-900">{viewingLog.prospectName || '-'}</p>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      By {viewingLog.submittedBy} · {new Date(viewingLog.$createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div><span className="text-xs text-slate-500">Call Back</span><p className="font-medium">{viewingLog.callBack || '-'}</p></div>
-                    <div><span className="text-xs text-slate-500">Not Interest</span><p className="font-medium">{viewingLog.notInterest || '-'}</p></div>
-                    <div><span className="text-xs text-slate-500">Need to Work</span><p className="font-medium">{viewingLog.needToWork || '-'}</p></div>
-                    <div><span className="text-xs text-slate-500">Visit Select</span><p className="font-medium">{viewingLog.visitSelect || '-'}</p></div>
-                    <div><span className="text-xs text-slate-500">Free Sewa</span><p className="font-medium">{viewingLog.freeSewa || '-'}</p></div>
-                    <div><span className="text-xs text-slate-500">Nominal List</span><p className="font-medium">{viewingLog.nominalListSelect || '-'}</p></div>
-                  </div>
-                  {(viewingLog.notes1 || viewingLog.notes2 || viewingLog.notes3) && (
-                    <div>
-                      <span className="text-xs text-slate-500">Notes</span>
-                      <p className="text-sm">{[viewingLog.notes1, viewingLog.notes2, viewingLog.notes3].filter(Boolean).join(' · ') || '-'}</p>
-                    </div>
-                  )}
-                  {viewingLog.jathaDetails && (() => {
-                    try {
-                      const jathas = typeof viewingLog.jathaDetails === 'string' ? JSON.parse(viewingLog.jathaDetails) : viewingLog.jathaDetails
-                      if (Array.isArray(jathas) && jathas.length > 0) {
-                        return (
-                          <div>
-                            <span className="text-xs text-slate-500">Jatha Details</span>
-                            <ul className="mt-1 space-y-2">
-                              {jathas.map((j, i) => (
-                                <li key={i} className="rounded border border-slate-200 bg-white px-3 py-2 text-sm">
-                                  {j.areaName || '-'} · {j.departmentName || '-'} {j.jathaTotalDay ? `· ${j.jathaTotalDay} days` : ''} · {j.dateFrom || '-'} – {j.dateTo || '-'}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )
-                      }
-                    } catch { /* ignore */ }
-                    return null
-                  })()}
-                </div>
-              ) : callLogs.length === 0 ? (
-                <p className="py-8 text-center text-sm text-slate-500">No call forms submitted yet.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {callLogs.map((log) => (
-                    <li
-                      key={log.$id}
-                      className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/50 px-4 py-3 transition hover:bg-slate-100"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-slate-900">{log.prospectName || 'Unknown'}</p>
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          By {log.submittedBy} · {new Date(log.$createdAt).toLocaleString()}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setViewingLog(log)}
-                        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
-                      >
-                        View
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Attendance modal - Under Construction */}
       {attendanceModalOpen && (

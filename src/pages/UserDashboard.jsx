@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../services/AuthContext'
 import { listProspectsAssignedTo, docToDisplay } from '../services/prospectsService'
-import { createCallLog } from '../services/callLogsService'
+import { createCallLog, listCallLogsForUser } from '../services/callLogsService'
 
 const SEARCH_BY_OPTIONS = ['Name of Sewadar/Sewadarni', 'Address', 'Phone Number', 'Badge ID', 'Blood Group']
 
@@ -15,6 +15,7 @@ function getAttr(doc, ...keys) {
 }
 
 const INITIAL_FORM = {
+  select: '',
   callBack: '',
   notInterest: '',
   needToWork: '',
@@ -38,11 +39,13 @@ function UserDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [formOpen, setFormOpen] = useState(false)
+  const [viewOnly, setViewOnly] = useState(false)
   const [selectedProspect, setSelectedProspect] = useState(null)
   const [selectedDoc, setSelectedDoc] = useState(null)
   const [form, setForm] = useState(INITIAL_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState('')
+  const [userCallLogsByProspect, setUserCallLogsByProspect] = useState({})
 
   const loadAssigned = useCallback(async () => {
     const email = user?.email
@@ -72,6 +75,29 @@ function UserDashboard() {
     loadAssigned()
   }, [loadAssigned])
 
+  useEffect(() => {
+    async function loadUserCallLogs() {
+      const email = user?.email
+      if (!email) {
+        setUserCallLogsByProspect({})
+        return
+      }
+      try {
+        const res = await listCallLogsForUser(email)
+        const docs = res.documents || []
+        const byProspect = {}
+        docs.forEach((d) => {
+          if (!d.prospectId) return
+          if (!byProspect[d.prospectId]) byProspect[d.prospectId] = d
+        })
+        setUserCallLogsByProspect(byProspect)
+      } catch {
+        // ignore; user can still submit forms
+      }
+    }
+    loadUserCallLogs()
+  }, [user?.email])
+
   const baseFiltered = prospects.filter((p) => {
     const q = searchQuery.trim().toLowerCase()
     if (!q) return true
@@ -87,10 +113,39 @@ function UserDashboard() {
 
   const updateForm = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
 
-  function openForm(prospect) {
+  function openForm(prospect, options = {}) {
+    const mode = options.mode || 'edit'
     setSelectedProspect(prospect)
     setSelectedDoc(prospectDocs[prospect.id] || null)
-    setForm(INITIAL_FORM)
+    const existingLog = userCallLogsByProspect[prospect.id]
+    if (mode === 'view' && existingLog) {
+      let jatha = []
+      try {
+        jatha =
+          typeof existingLog.jathaDetails === 'string'
+            ? JSON.parse(existingLog.jathaDetails || '[]')
+            : existingLog.jathaDetails || []
+      } catch {
+        jatha = []
+      }
+      setForm({
+        select: existingLog.select || '',
+        callBack: existingLog.callBack || '',
+        notInterest: existingLog.notInterest || '',
+        needToWork: existingLog.needToWork || '',
+        notes1: existingLog.notes1 || '',
+        notes2: existingLog.notes2 || '',
+        notes3: existingLog.notes3 || '',
+        nominalListSelect: existingLog.nominalListSelect || '',
+        visitSelect: existingLog.visitSelect || '',
+        freeSewa: existingLog.freeSewa || 'N/A',
+        jathaDetails: Array.isArray(jatha) ? jatha : [],
+      })
+      setViewOnly(true)
+    } else {
+      setForm(INITIAL_FORM)
+      setViewOnly(false)
+    }
     setSuccess('')
     setFormOpen(true)
   }
@@ -100,6 +155,7 @@ function UserDashboard() {
     setSelectedProspect(null)
     setSelectedDoc(null)
     setForm(INITIAL_FORM)
+    setViewOnly(false)
   }
 
   function addJatha() {
@@ -119,6 +175,7 @@ function UserDashboard() {
 
   async function handleSubmit(e) {
     e.preventDefault()
+    if (viewOnly) return
     if (!selectedProspect || !user?.email) return
     setSubmitting(true)
     setError('')
@@ -128,6 +185,7 @@ function UserDashboard() {
         prospectId: selectedProspect.id,
         prospectName: selectedProspect.name,
         submittedBy: user.email,
+        select: form.select,
         callBack: form.callBack,
         notInterest: form.notInterest,
         needToWork: form.needToWork,
@@ -203,23 +261,29 @@ function UserDashboard() {
               <>
                 {/* Mobile card view */}
                 <div className="flex flex-col gap-2 md:hidden">
-                  {baseFiltered.map((p) => (
-                    <div key={p.id} className="flex items-start justify-between gap-2 rounded-lg border border-slate-200 bg-white p-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-slate-900">{p.name || '-'}</p>
-                        <p className="mt-0.5 truncate text-xs text-slate-600">{p.address || '-'}</p>
-                        <p className="mt-0.5 text-xs text-slate-600">{p.phoneNumber || '-'}</p>
-                        <p className="mt-0.5 text-[11px] text-slate-500">ID:{p.badgeId || '-'} · {p.bloodGroup || '-'}</p>
+                  {baseFiltered.map((p) => {
+                    const existingLog = userCallLogsByProspect[p.id]
+                    const hasLog = !!existingLog
+                    return (
+                      <div key={p.id} className="flex items-start justify-between gap-2 rounded-lg border border-slate-200 bg-white p-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-slate-900">{p.name || '-'}</p>
+                          <p className="mt-0.5 truncate text-xs text-slate-600">{p.address || '-'}</p>
+                          <p className="mt-0.5 text-xs text-slate-600">{p.phoneNumber || '-'}</p>
+                          <p className="mt-0.5 text-[11px] text-slate-500">ID:{p.badgeId || '-'} · {p.bloodGroup || '-'}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => openForm(p, { mode: hasLog ? 'view' : 'edit' })}
+                          className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-white ${
+                            hasLog ? 'bg-slate-600 hover:bg-slate-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                          }`}
+                        >
+                          {hasLog ? 'View Form' : 'Fill Form'}
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => openForm(p)}
-                        className="shrink-0 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-                      >
-                        Fill Form
-                      </button>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
                 {/* Desktop table */}
@@ -236,24 +300,30 @@ function UserDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {baseFiltered.map((p) => (
-                        <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50/50">
-                          <td className="px-4 py-3 font-medium text-slate-900">{p.name || '-'}</td>
-                          <td className="px-4 py-3 text-slate-600">{p.address || '-'}</td>
-                          <td className="px-4 py-3 text-slate-600">{p.phoneNumber || '-'}</td>
-                          <td className="px-4 py-3 text-slate-600">{p.badgeId || '-'}</td>
-                          <td className="px-4 py-3 text-slate-600">{p.bloodGroup || '-'}</td>
-                          <td className="px-4 py-3">
-                            <button
-                              type="button"
-                              onClick={() => openForm(p)}
-                              className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
-                            >
-                              Fill Form
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {baseFiltered.map((p) => {
+                        const existingLog = userCallLogsByProspect[p.id]
+                        const hasLog = !!existingLog
+                        return (
+                          <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50/50">
+                            <td className="px-4 py-3 font-medium text-slate-900">{p.name || '-'}</td>
+                            <td className="px-4 py-3 text-slate-600">{p.address || '-'}</td>
+                            <td className="px-4 py-3 text-slate-600">{p.phoneNumber || '-'}</td>
+                            <td className="px-4 py-3 text-slate-600">{p.badgeId || '-'}</td>
+                            <td className="px-4 py-3 text-slate-600">{p.bloodGroup || '-'}</td>
+                            <td className="px-4 py-3">
+                              <button
+                                type="button"
+                                onClick={() => openForm(p, { mode: hasLog ? 'view' : 'edit' })}
+                                className={`rounded-lg px-3 py-1.5 text-sm font-medium text-white ${
+                                  hasLog ? 'bg-slate-600 hover:bg-slate-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                                }`}
+                              >
+                                {hasLog ? 'View Form' : 'Fill Form'}
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -335,79 +405,143 @@ function UserDashboard() {
                 </div>
               </div>
 
-              {/* Calling Data Select Option + Transfer Data - bold red header */}
-              <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">Calling Data Select Option</p>
-              <div className="mb-4 grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-4">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">Call Back</label>
-                  <select value={form.callBack} onChange={updateForm('callBack')} className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm">
-                    <option value="">Select</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
+              {/* Calling Data Select Option + Transfer Data - layout side by side */}
+              <div className="mb-4 grid gap-3 md:grid-cols-2">
+                <div className="rounded-lg border border-slate-200 bg-white p-4">
+                  <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">Calling Data Select Option</p>
+                  <div className="grid grid-cols-1 gap-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Select</label>
+                      <select
+                        value={form.select}
+                        onChange={updateForm('select')}
+                        disabled={viewOnly}
+                        className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm disabled:bg-slate-50"
+                      >
+                        <option value="">Select</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Call Back</label>
+                      <select
+                        value={form.callBack}
+                        onChange={updateForm('callBack')}
+                        disabled={viewOnly}
+                        className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm disabled:bg-slate-50"
+                      >
+                        <option value="">Select</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Not Interest</label>
+                      <select
+                        value={form.notInterest}
+                        onChange={updateForm('notInterest')}
+                        disabled={viewOnly}
+                        className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm disabled:bg-slate-50"
+                      >
+                        <option value="">Select</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">Not Interest</label>
-                  <select value={form.notInterest} onChange={updateForm('notInterest')} className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm">
-                    <option value="">Select</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs font-medium text-slate-600">Need to Work</label>
-                  <textarea value={form.needToWork} onChange={updateForm('needToWork')} rows={2} placeholder="Notes" className="w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm" />
-                </div>
-              </div>
-              <div className="mb-4 grid grid-cols-1 gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">Good participation</label>
-                  <textarea value={form.notes1} onChange={updateForm('notes1')} rows={2} className="w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm" />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">Positive</label>
-                  <textarea value={form.notes2} onChange={updateForm('notes2')} rows={2} className="w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm" />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">VIP prospect</label>
-                  <textarea value={form.notes3} onChange={updateForm('notes3')} rows={2} className="w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm" />
+                <div className="rounded-lg border border-slate-200 bg-white p-4">
+                  <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">Transfer Data</p>
+                  <div className="grid grid-cols-1 gap-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Nominal List Select</label>
+                      <select
+                        value={form.nominalListSelect}
+                        onChange={updateForm('nominalListSelect')}
+                        disabled={viewOnly}
+                        className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm disabled:bg-slate-50"
+                      >
+                        <option value="">Select</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Visit Select</label>
+                      <select
+                        value={form.visitSelect}
+                        onChange={updateForm('visitSelect')}
+                        disabled={viewOnly}
+                        className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm disabled:bg-slate-50"
+                      >
+                        <option value="">Select</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Free Sewa</label>
+                      <select
+                        value={form.freeSewa}
+                        onChange={updateForm('freeSewa')}
+                        disabled={viewOnly}
+                        className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm disabled:bg-slate-50"
+                      >
+                        <option value="N/A">N/A</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <p className="mb-3 text-sm font-bold text-slate-900">Transfer Data</p>
-              <div className="mb-4 grid grid-cols-3 gap-3 rounded-lg border border-slate-200 bg-white p-4">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">Nominal List Select</label>
-                  <select value={form.nominalListSelect} onChange={updateForm('nominalListSelect')} className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm">
-                    <option value="">Select</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">Visit Select</label>
-                  <select value={form.visitSelect} onChange={updateForm('visitSelect')} className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm">
-                    <option value="">Select</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">Free Sewa</label>
-                  <select value={form.freeSewa} onChange={updateForm('freeSewa')} className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm">
-                    <option value="N/A">N/A</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
+              {/* Need to Work notes */}
+              <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
+                <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">Need to Work</p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">Good participation</label>
+                    <textarea
+                      value={form.notes1}
+                      onChange={updateForm('notes1')}
+                      disabled={viewOnly}
+                      rows={2}
+                      className="w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm disabled:bg-slate-50"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">Positive</label>
+                    <textarea
+                      value={form.notes2}
+                      onChange={updateForm('notes2')}
+                      disabled={viewOnly}
+                      rows={2}
+                      className="w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm disabled:bg-slate-50"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">VIP prospect</label>
+                    <textarea
+                      value={form.notes3}
+                      onChange={updateForm('notes3')}
+                      disabled={viewOnly}
+                      rows={2}
+                      className="w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm disabled:bg-slate-50"
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Jatha Details - bold red header */}
               <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">Jatha Details</p>
+              {!viewOnly && (
               <button type="button" onClick={addJatha} className="mb-3 flex items-center gap-1.5 rounded-lg border border-sky-400 bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700 hover:bg-sky-100">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                 + Add Jatha
               </button>
+              )}
               {form.jathaDetails.length > 0 && (
                 <div className="mb-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">
                   <table className="w-full min-w-[500px] border-collapse text-left text-sm">
@@ -423,17 +557,19 @@ function UserDashboard() {
                     <tbody>
                       {form.jathaDetails.map((j, i) => (
                         <tr key={i} className="border-b border-slate-100">
-                          <td className="px-3 py-2"><input type="text" value={j.areaName} onChange={(e) => updateJatha(i, 'areaName', e.target.value)} placeholder="e.g. North Hall" className="w-full rounded border border-slate-200 px-2 py-1 text-xs" /></td>
-                          <td className="px-3 py-2"><input type="text" value={j.departmentName} onChange={(e) => updateJatha(i, 'departmentName', e.target.value)} placeholder="e.g. Langar Seva" className="w-full rounded border border-slate-200 px-2 py-1 text-xs" /></td>
-                          <td className="px-3 py-2"><input type="text" value={j.jathaTotalDay} onChange={(e) => updateJatha(i, 'jathaTotalDay', e.target.value)} placeholder="Days" className="w-full rounded border border-slate-200 px-2 py-1 text-xs" /></td>
+                          <td className="px-3 py-2"><input type="text" value={j.areaName} onChange={(e) => updateJatha(i, 'areaName', e.target.value)} placeholder="e.g. North Hall" disabled={viewOnly} className="w-full rounded border border-slate-200 px-2 py-1 text-xs disabled:bg-slate-50" /></td>
+                          <td className="px-3 py-2"><input type="text" value={j.departmentName} onChange={(e) => updateJatha(i, 'departmentName', e.target.value)} placeholder="e.g. Langar Seva" disabled={viewOnly} className="w-full rounded border border-slate-200 px-2 py-1 text-xs disabled:bg-slate-50" /></td>
+                          <td className="px-3 py-2"><input type="text" value={j.jathaTotalDay} onChange={(e) => updateJatha(i, 'jathaTotalDay', e.target.value)} placeholder="Days" disabled={viewOnly} className="w-full rounded border border-slate-200 px-2 py-1 text-xs disabled:bg-slate-50" /></td>
                           <td className="px-3 py-2">
                             <div className="flex gap-1">
-                              <input type="date" value={j.dateFrom} onChange={(e) => updateJatha(i, 'dateFrom', e.target.value)} className="rounded border border-slate-200 px-2 py-1 text-xs" />
-                              <input type="date" value={j.dateTo} onChange={(e) => updateJatha(i, 'dateTo', e.target.value)} className="rounded border border-slate-200 px-2 py-1 text-xs" />
+                              <input type="date" value={j.dateFrom} onChange={(e) => updateJatha(i, 'dateFrom', e.target.value)} disabled={viewOnly} className="rounded border border-slate-200 px-2 py-1 text-xs disabled:bg-slate-50" />
+                              <input type="date" value={j.dateTo} onChange={(e) => updateJatha(i, 'dateTo', e.target.value)} disabled={viewOnly} className="rounded border border-slate-200 px-2 py-1 text-xs disabled:bg-slate-50" />
                             </div>
                           </td>
                           <td className="px-2 py-2">
+                            {!viewOnly && (
                             <button type="button" onClick={() => removeJatha(i)} className="rounded p-1 text-red-500 hover:bg-red-50" aria-label="Remove"><svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -445,11 +581,13 @@ function UserDashboard() {
               {error && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
               {success && <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{success}</div>}
 
-              <div className="flex justify-center pt-4">
-                <button type="submit" disabled={submitting} className="w-full max-w-xs rounded-lg bg-emerald-600 px-6 py-3 text-base font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
-                  {submitting ? 'Submitting…' : 'SUBMIT'}
-                </button>
-              </div>
+              {!viewOnly && (
+                <div className="flex justify-center pt-4">
+                  <button type="submit" disabled={submitting} className="w-full max-w-xs rounded-lg bg-emerald-600 px-6 py-3 text-base font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
+                    {submitting ? 'Submitting…' : 'SUBMIT'}
+                  </button>
+                </div>
+              )}
             </form>
           </div>
         </div>

@@ -12,6 +12,7 @@ export async function createCallLog(data) {
     prospectId: String(data.prospectId ?? '').trim() || '',
     prospectName: String(data.prospectName ?? '').trim() || '',
     submittedBy: String(data.submittedBy ?? '').trim() || '',
+    select: String(data.select ?? '').trim() || '',
     callBack: String(data.callBack ?? '').trim() || '',
     notInterest: String(data.notInterest ?? '').trim() || '',
     needToWork: String(data.needToWork ?? '').trim() || '',
@@ -40,6 +41,42 @@ export async function listCallLogs() {
     return response
   } catch (error) {
     console.error('Failed to list call logs', error)
+    return { documents: [], total: 0 }
+  }
+}
+
+/** List call logs submitted by a specific user (for user dashboard) */
+export async function listCallLogsForUser(submittedBy) {
+  const { databaseId, callLogsCollectionId } = APPWRITE_CONFIG
+  if (!databaseId || !callLogsCollectionId || !submittedBy) {
+    return { documents: [], total: 0 }
+  }
+  try {
+    const response = await databases.listDocuments(databaseId, callLogsCollectionId, [
+      Query.equal('submittedBy', submittedBy),
+      Query.orderDesc('$createdAt'),
+    ])
+    return response
+  } catch (error) {
+    console.error('Failed to list call logs for user', error)
+    return { documents: [], total: 0 }
+  }
+}
+
+/** List call logs for a particular prospect (for admin view per prospect) */
+export async function listCallLogsForProspect(prospectId) {
+  const { databaseId, callLogsCollectionId } = APPWRITE_CONFIG
+  if (!databaseId || !callLogsCollectionId || !prospectId) {
+    return { documents: [], total: 0 }
+  }
+  try {
+    const response = await databases.listDocuments(databaseId, callLogsCollectionId, [
+      Query.equal('prospectId', prospectId),
+      Query.orderDesc('$createdAt'),
+    ])
+    return response
+  } catch (error) {
+    console.error('Failed to list call logs for prospect', error)
     return { documents: [], total: 0 }
   }
 }

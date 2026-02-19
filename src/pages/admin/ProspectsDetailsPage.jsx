@@ -12,6 +12,8 @@ import {
   docToDisplay,
 } from '../../services/prospectsService'
 import { listUsers } from '../../services/usersService'
+import { listCallLogsForProspect } from '../../services/callLogsService'
+import { jsPDF } from 'jspdf'
 
 const SEARCH_BY_OPTIONS = [
   'Name of Sewadar/Sewadarni',
@@ -339,6 +341,7 @@ function ProspectsDetailsPage() {
   const [assignedFilterUser, setAssignedFilterUser] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState(null) // { type: 'single', id } | { type: 'bulk', count } | null
   const fileInputRef = useRef(null)
+  const [viewCallLog, setViewCallLog] = useState(null) // { prospect, log } | null
 
   const loadProspects = useCallback(async () => {
     setLoading(true)
@@ -462,6 +465,20 @@ function ProspectsDetailsPage() {
       setError(err.message || 'Failed to delete.')
     } finally {
       setDeleting(false)
+    }
+  }
+
+  const openCallLogForProspect = async (prospect) => {
+    try {
+      const res = await listCallLogsForProspect(prospect.id)
+      const docs = res.documents || []
+      if (!docs.length) {
+        setError('No submitted calling form found for this prospect.')
+        return
+      }
+      setViewCallLog({ prospect, log: docs[0] })
+    } catch (err) {
+      setError(err.message || 'Failed to load calling form.')
     }
   }
 
@@ -783,22 +800,11 @@ function ProspectsDetailsPage() {
                 </button>
               </div>
               <form onSubmit={handleSubmitProspect} className="flex-1 overflow-y-auto px-5 py-4">
-                {/* Profile Details */}
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Profile Details</p>
+                {/* Badge & Profile Details */}
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-red-600">Badge Status</p>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-600">Name of Sewadar/Sewadarni *</label>
-                    <input
-                      type="text"
-                      required
-                      value={addForm.name}
-                      onChange={updateAddForm('name')}
-                      placeholder="Full name"
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-600">Badge Status</label>
+                  <div className="sm:col-span-2">
+                    <label className="mb-1 block text-xs font-medium text-slate-700">Badge Status</label>
                     <select
                       value={addForm.badgeStatus}
                       onChange={updateAddForm('badgeStatus')}
@@ -811,6 +817,17 @@ function ProspectsDetailsPage() {
                       <option value="Sangat">Sangat</option>
                       <option value="New Prospects">New Prospects</option>
                     </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-red-600">Name of Sewadar/Sewadarni *</label>
+                    <input
+                      type="text"
+                      required
+                      value={addForm.name}
+                      onChange={updateAddForm('name')}
+                      placeholder="Full name"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+                    />
                   </div>
                   <div>
                     <label className="mb-1 block text-xs font-medium text-slate-600">Father&apos;s/Husband&apos;s Name</label>
@@ -872,7 +889,7 @@ function ProspectsDetailsPage() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-600">Aadhar Number</label>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">Aadhar No</label>
                     <input
                       type="text"
                       value={addForm.aadharNumber}
@@ -909,7 +926,7 @@ function ProspectsDetailsPage() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-600">Emergency Contact Number</label>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">Emergency Contact</label>
                     <input
                       type="text"
                       value={addForm.emergencyContact}
@@ -953,6 +970,7 @@ function ProspectsDetailsPage() {
                     />
                   </div>
                   <div className="sm:col-span-2">
+                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-red-600">Address</p>
                     <label className="mb-1 block text-xs font-medium text-slate-600">Residential Address</label>
                     <textarea
                       value={addForm.fullAddress}
@@ -1053,6 +1071,173 @@ function ProspectsDetailsPage() {
             </div>
           </div>
         )}
+
+        {/* View Call Log (filled calling form) */}
+        {viewCallLog && (() => {
+          const { prospect, log } = viewCallLog
+          let jathas = []
+          try {
+            jathas = typeof log.jathaDetails === 'string' ? JSON.parse(log.jathaDetails || '[]') : (log.jathaDetails || [])
+          } catch {
+            jathas = []
+          }
+
+          const handleDownload = () => {
+            const docPdf = new jsPDF()
+            const marginX = 10
+            const maxWidth = 190
+            let y = 12
+
+            const addLines = (lines, opts = {}) => {
+              const { heading = false, gapBefore = 4 } = opts
+              if (gapBefore && y > 12) y += gapBefore
+              lines.forEach((line) => {
+                const chunks = docPdf.splitTextToSize(line, maxWidth)
+                chunks.forEach((chunk) => {
+                  if (y > 280) {
+                    docPdf.addPage()
+                    y = 12
+                  }
+                  docPdf.setFontSize(heading ? 12 : 10)
+                  docPdf.text(chunk, marginX, y)
+                  y += heading ? 6 : 5
+                })
+              })
+            }
+
+            addLines(
+              [
+                `Name: ${prospect.name || '-'}`,
+                `Badge ID: ${prospect.badgeId || '-'}`,
+                `Phone: ${prospect.phoneNumber || '-'}`,
+                `Address: ${prospect.address || '-'}`,
+              ],
+              { heading: false, gapBefore: 0 },
+            )
+
+            addLines(['Calling Data'], { heading: true })
+            addLines([
+              `Select: ${log.select || '-'}`,
+              `Call Back: ${log.callBack || '-'}`,
+              `Not Interest: ${log.notInterest || '-'}`,
+            ])
+
+            addLines(['Transfer Data'], { heading: true })
+            addLines([
+              `Nominal List Select: ${log.nominalListSelect || '-'}`,
+              `Visit Select: ${log.visitSelect || '-'}`,
+              `Free Sewa: ${log.freeSewa || '-'}`,
+            ])
+
+            addLines(['Need to Work'], { heading: true })
+            addLines([
+              `Good participation: ${log.notes1 || '-'}`,
+              `Positive: ${log.notes2 || '-'}`,
+              `VIP prospect: ${log.notes3 || '-'}`,
+            ])
+
+            if (Array.isArray(jathas) && jathas.length > 0) {
+              addLines(['Jatha Details'], { heading: true })
+              jathas.forEach((j, i) => {
+                addLines([
+                  `${i + 1}. ${j.areaName || '-'} | ${j.departmentName || '-'} | ${j.jathaTotalDay || '-'} days | ${j.dateFrom || '-'} - ${j.dateTo || '-'}`,
+                ])
+              })
+            }
+
+            docPdf.save(`call_form_${prospect.badgeId || prospect.id}.pdf`)
+          }
+
+          return (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="view-calllog-title"
+              onClick={() => setViewCallLog(null)}
+            >
+              <div
+                className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-xl bg-white shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                  <div>
+                    <h2 id="view-calllog-title" className="text-lg font-semibold text-slate-900">
+                      Calling Form
+                    </h2>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      Submitted by {log.submittedBy} · {new Date(log.$createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleDownload}
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      Download
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewCallLog(null)}
+                      className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                      aria-label="Close"
+                    >
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4 text-sm">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                    <p className="font-semibold text-slate-900">{prospect.name || '-'}</p>
+                    <p className="mt-0.5 text-xs text-slate-600">{prospect.address || '-'}</p>
+                    <p className="mt-0.5 text-xs text-slate-600">
+                      Badge: {prospect.badgeId || '-'} · Phone: {prospect.phoneNumber || '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-red-600">Calling Data Select Option</p>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <div><span className="text-xs text-slate-500">Select</span><p className="font-medium">{log.select || '-'}</p></div>
+                      <div><span className="text-xs text-slate-500">Call Back</span><p className="font-medium">{log.callBack || '-'}</p></div>
+                      <div><span className="text-xs text-slate-500">Not Interest</span><p className="font-medium">{log.notInterest || '-'}</p></div>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-red-600">Transfer Data</p>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <div><span className="text-xs text-slate-500">Nominal List Select</span><p className="font-medium">{log.nominalListSelect || '-'}</p></div>
+                      <div><span className="text-xs text-slate-500">Visit Select</span><p className="font-medium">{log.visitSelect || '-'}</p></div>
+                      <div><span className="text-xs text-slate-500">Free Sewa</span><p className="font-medium">{log.freeSewa || '-'}</p></div>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-red-600">Need to Work</p>
+                    <ul className="space-y-1 text-sm">
+                      <li><span className="font-medium text-slate-700">Good participation:</span> {log.notes1 || '-'}</li>
+                      <li><span className="font-medium text-slate-700">Positive:</span> {log.notes2 || '-'}</li>
+                      <li><span className="font-medium text-slate-700">VIP prospect:</span> {log.notes3 || '-'}</li>
+                    </ul>
+                  </div>
+                  {Array.isArray(jathas) && jathas.length > 0 && (
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-red-600">Jatha Details</p>
+                      <ul className="space-y-1 text-sm">
+                        {jathas.map((j, i) => (
+                          <li key={i} className="rounded border border-slate-200 bg-slate-50 px-3 py-1.5">
+                            {j.areaName || '-'} · {j.departmentName || '-'} {j.jathaTotalDay ? `· ${j.jathaTotalDay} days` : ''} · {j.dateFrom || '-'} – {j.dateTo || '-'}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Delete confirmation modal */}
         {deleteConfirm && (
@@ -1159,17 +1344,26 @@ function ProspectsDetailsPage() {
                         <span>{p.bloodGroup || '-'}</span>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => openDeleteConfirm(p.id)}
-                      disabled={deleting}
-                      className="shrink-0 rounded p-1.5 text-red-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                      aria-label={`Delete ${p.name || 'prospect'}`}
-                    >
-                      <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => openCallLogForProspect(p)}
+                        className="rounded bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-200"
+                      >
+                        View Form
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openDeleteConfirm(p.id)}
+                        disabled={deleting}
+                        className="shrink-0 rounded p-1.5 text-red-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                        aria-label={`Delete ${p.name || 'prospect'}`}
+                      >
+                        <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1223,17 +1417,26 @@ function ProspectsDetailsPage() {
                         <td className="px-4 py-3 text-slate-600">{p.assignedTo || '-'}</td>
                         <td className="px-4 py-3 text-slate-600">{p.bloodGroup || '-'}</td>
                         <td className="px-4 py-3">
-                          <button
-                            type="button"
-                            onClick={() => openDeleteConfirm(p.id)}
-                            disabled={deleting}
-                            className="rounded p-1.5 text-red-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                            aria-label={`Delete ${p.name || 'prospect'}`}
-                          >
-                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openCallLogForProspect(p)}
+                              className="rounded border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                            >
+                              View Form
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openDeleteConfirm(p.id)}
+                              disabled={deleting}
+                              className="rounded p-1.5 text-red-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                              aria-label={`Delete ${p.name || 'prospect'}`}
+                            >
+                              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
