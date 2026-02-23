@@ -3,6 +3,7 @@ import { useAuth } from "../services/AuthContext";
 import {
   listProspectsAssignedTo,
   docToDisplay,
+  createProspect,
 } from "../services/prospectsService";
 import {
   createCallLog,
@@ -68,6 +69,30 @@ function UserDashboard() {
   const [userCallLogsByProspect, setUserCallLogsByProspect] = useState({});
   const [editingCallLogId, setEditingCallLogId] = useState(null);
   const [openMenu, setOpenMenu] = useState(null);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [addForm, setAddForm] = useState({
+    name: "",
+    fathersName: "",
+    mobileNumber: "",
+    age: "",
+    departmentName: "",
+    badgeStatus: "N/A",
+    badgeId: "",
+    gender: "Male",
+    aadharNumber: "",
+    dateOfBirth: "",
+    emergencyContact: "",
+    bloodgroup: "",
+    locality: "",
+    fullAddress: "",
+    permanentAddress: "",
+    maritalStatus: "N/A",
+    initiated: false,
+    dateOfInitiation: "",
+    initiationBy: "",
+    initiationPlace: "",
+  });
+  const [addSubmitting, setAddSubmitting] = useState(false);
 
   const loadAssigned = useCallback(async () => {
     const email = user?.email;
@@ -146,6 +171,90 @@ function UserDashboard() {
 
   const updateForm = (field) => (e) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
+
+  const updateAddForm = (field) => (e) =>
+    setAddForm((f) => ({ ...f, [field]: e.target.value }));
+  const updateAddFormRadio = (field) => (e) =>
+    setAddForm((f) => ({ ...f, [field]: e.target.value }));
+
+  function calculateAgeFromDob(dateStr) {
+    if (!dateStr) return "";
+    const dob = new Date(dateStr);
+    if (Number.isNaN(dob.getTime())) return "";
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+      age--;
+    }
+    return age >= 0 ? String(age) : "";
+  }
+
+  const openAddModal = () => {
+    setAddForm({
+      fullName: "",
+      mobile: "",
+      address: "",
+      badgeId: "",
+      fatherHusbandName: "",
+      departmentName: "",
+      dateOfBirth: "",
+      aadhar: "",
+      emergencyContact: "",
+      bloodgroup: "",
+    });
+    setAddModalOpen(true);
+    setError("");
+    setSuccess("");
+  };
+
+  const closeAddModal = () => {
+    setAddModalOpen(false);
+    setAddForm({});
+  };
+
+  const handleSubmitAddProspect = async (e) => {
+    e.preventDefault();
+    if (!addForm.name || !addForm.mobileNumber) {
+      setError("Name and Mobile Number are required to add a prospect.");
+      return;
+    }
+    setAddSubmitting(true);
+    setError("");
+    try {
+      await createProspect({
+        name: addForm.name,
+        fathersName: addForm.fathersName,
+        mobileNumber: addForm.mobileNumber,
+        age: addForm.age,
+        departmentName: addForm.departmentName,
+        badgeStatus: addForm.badgeStatus,
+        badgeId: addForm.badgeId,
+        gender: addForm.gender,
+        aadharNumber: addForm.aadharNumber,
+        dateOfBirth: addForm.dateOfBirth,
+        emergencyContact: addForm.emergencyContact,
+        bloodgroup: addForm.bloodgroup,
+        locality: addForm.locality,
+        fullAddress: addForm.fullAddress,
+        permanentAddress: addForm.permanentAddress,
+        maritalStatus: addForm.maritalStatus,
+        initiated: addForm.initiated,
+        dateOfInitiation: addForm.dateOfInitiation,
+        initiationBy: addForm.initiationBy,
+        initiationPlace: addForm.initiationPlace,
+      });
+      setSuccess("Prospect added successfully. Admin will assign if needed.");
+      setTimeout(async () => {
+        closeAddModal();
+        await loadAssigned();
+      }, 800);
+    } catch (err) {
+      setError(err.message || "Failed to add prospect.");
+    } finally {
+      setAddSubmitting(false);
+    }
+  };
 
   function openForm(prospect, options = {}) {
     const mode = options.mode || "edit";
@@ -341,6 +450,28 @@ function UserDashboard() {
                 className="w-full rounded-md border border-slate-200 py-2 pl-8 pr-2 text-xs outline-none focus:border-slate-400 sm:rounded-lg sm:pl-9 sm:pr-3 sm:text-sm"
               />
             </div>
+          </div>
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              onClick={openAddModal}
+              className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-xs font-medium text-white hover:bg-slate-900"
+            >
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              Add Prospect
+            </button>
           </div>
         </div>
 
@@ -678,6 +809,20 @@ function UserDashboard() {
                   </label>
                   <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
                     {getAttr(doc, "guardian", "guardian") || "-"}
+                  </p>
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
+                    Father / Husband Name
+                  </label>
+                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
+                    {getAttr(
+                      doc,
+                      "fatherHusbandName",
+                      "fatherHusbandName",
+                      "fathersName",
+                      "husbandName",
+                    ) || "-"}
                   </p>
                 </div>
               </div>
@@ -1160,6 +1305,364 @@ function UserDashboard() {
                   </button>
                 </div>
               )}
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Prospect Modal for users */}
+      {addModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-slate-900/50 p-0 sm:items-center sm:p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="add-prospect-title-user"
+          onClick={closeAddModal}
+        >
+          <div
+            className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-t-xl bg-white shadow-xl sm:rounded-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
+              <div>
+                <h2
+                  id="add-prospect-title-user"
+                  className="text-lg font-semibold text-slate-900"
+                >
+                  Add Prospect
+                </h2>
+                <p className="mt-0.5 text-sm text-slate-500">
+                  Quick add prospect (admin can edit/assign later)
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeAddModal}
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form
+              onSubmit={handleSubmitAddProspect}
+              className="flex-1 overflow-y-auto px-5 py-4"
+            >
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-red-600">
+                Badge Status
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs font-medium text-slate-700">
+                    Badge Status
+                  </label>
+                  <select
+                    value={addForm.badgeStatus}
+                    onChange={updateAddForm("badgeStatus")}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
+                  >
+                    <option value="N/A">N/A</option>
+                    <option value="Open">Open</option>
+                    <option value="Permanent">Permanent</option>
+                    <option value="Elderly">Elderly</option>
+                    <option value="Sangat">Sangat</option>
+                    <option value="New Prospects">New Prospects</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-red-600">
+                    Name of Sewadar/Sewadarni *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={addForm.name}
+                    onChange={updateAddForm("name")}
+                    placeholder="Full name"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                    Father's/Husband's Name
+                  </label>
+                  <input
+                    type="text"
+                    value={addForm.fathersName}
+                    onChange={updateAddForm("fathersName")}
+                    placeholder="Father's or Husband's name"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                    Badge ID
+                  </label>
+                  <input
+                    type="text"
+                    value={addForm.badgeId}
+                    onChange={updateAddForm("badgeId")}
+                    placeholder="Enter badge ID"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                    Mobile Number *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={addForm.mobileNumber}
+                    onChange={updateAddForm("mobileNumber")}
+                    placeholder="e.g., 9876543210"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                    Gender (M/F)
+                  </label>
+                  <div className="flex gap-4 pt-2">
+                    {["Male", "Female", "Other"].map((opt) => (
+                      <label
+                        key={opt}
+                        className="flex cursor-pointer items-center gap-2"
+                      >
+                        <input
+                          type="radio"
+                          name="gender"
+                          value={opt}
+                          checked={addForm.gender === opt}
+                          onChange={updateAddFormRadio("gender")}
+                          className="text-slate-700"
+                        />
+                        <span className="text-sm text-slate-600">{opt}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                    Age
+                  </label>
+                  <input
+                    type="text"
+                    value={addForm.age}
+                    readOnly
+                    placeholder="Age (auto-calculated)"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                    Aadhar No
+                  </label>
+                  <input
+                    type="text"
+                    value={addForm.aadharNumber}
+                    onChange={updateAddForm("aadharNumber")}
+                    placeholder="12-digit Aadhar number"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                    Department Finalised Name
+                  </label>
+                  <input
+                    type="text"
+                    value={addForm.departmentName}
+                    onChange={updateAddForm("departmentName")}
+                    placeholder="Department name"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                    Date of Birth
+                  </label>
+                  <input
+                    type="date"
+                    value={addForm.dateOfBirth}
+                    onChange={({ target: { value } }) => {
+                      setAddForm((f) => ({
+                        ...f,
+                        dateOfBirth: value,
+                        age: calculateAgeFromDob(value),
+                      }));
+                    }}
+                    max={new Date().toISOString().slice(0, 10)}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                    Emergency Contact
+                  </label>
+                  <input
+                    type="text"
+                    value={addForm.emergencyContact}
+                    onChange={updateAddForm("emergencyContact")}
+                    placeholder="Emergency contact"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                    Blood Group
+                  </label>
+                  <input
+                    type="text"
+                    value={addForm.bloodgroup}
+                    onChange={updateAddForm("bloodgroup")}
+                    placeholder="e.g., A+, B-, O+, AB+"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                    Marital Status
+                  </label>
+                  <select
+                    value={addForm.maritalStatus}
+                    onChange={updateAddForm("maritalStatus")}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
+                  >
+                    <option value="N/A">N/A</option>
+                    <option value="Single">Single</option>
+                    <option value="Married">Married</option>
+                    <option value="Widowed">Widowed</option>
+                    <option value="Divorced">Divorced</option>
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                    R/O Village/Town/Locality/District
+                  </label>
+                  <input
+                    type="text"
+                    value={addForm.locality}
+                    onChange={updateAddForm("locality")}
+                    placeholder="e.g., Model Town, Ludhiana"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-red-600">
+                    Address
+                  </p>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                    Residential Address
+                  </label>
+                  <textarea
+                    value={addForm.fullAddress}
+                    onChange={updateAddForm("fullAddress")}
+                    placeholder="Complete residential address"
+                    rows={3}
+                    className="w-full resize-y rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                    Permanent Address
+                  </label>
+                  <textarea
+                    value={addForm.permanentAddress}
+                    onChange={updateAddForm("permanentAddress")}
+                    placeholder="Permanent address (if different from residential)"
+                    rows={3}
+                    className="w-full resize-y rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Naam Dan Details */}
+              <p className="mb-3 mt-6 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Naam Dan Details
+              </p>
+              <div className="mb-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">
+                      Has the prospect been initiated?
+                    </label>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      Indicate if Naam Dan has been received.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={addForm.initiated}
+                    onClick={() =>
+                      setAddForm((f) => ({ ...f, initiated: !f.initiated }))
+                    }
+                    className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${addForm.initiated ? "bg-sky-600" : "bg-slate-200"}`}
+                  >
+                    <span
+                      className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${addForm.initiated ? "left-6" : "left-1"}`}
+                    />
+                  </button>
+                </div>
+                {addForm.initiated && (
+                  <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">
+                        Date of Initiation (DOI)
+                      </label>
+                      <input
+                        type="date"
+                        value={addForm.dateOfInitiation}
+                        onChange={updateAddForm("dateOfInitiation")}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">
+                        Initiation By
+                      </label>
+                      <input
+                        type="text"
+                        value={addForm.initiationBy}
+                        onChange={updateAddForm("initiationBy")}
+                        placeholder="Name of initiator"
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">
+                        Initiation Place
+                      </label>
+                      <input
+                        type="text"
+                        value={addForm.initiationPlace}
+                        onChange={updateAddForm("initiationPlace")}
+                        placeholder="Location of initiation"
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4 flex justify-end gap-2 border-t border-slate-200 pt-4">
+                <button
+                  type="button"
+                  onClick={closeAddModal}
+                  className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addSubmitting}
+                  className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+                >
+                  {addSubmitting ? "Adding…" : "Submit Prospect"}
+                </button>
+              </div>
             </form>
           </div>
         </div>

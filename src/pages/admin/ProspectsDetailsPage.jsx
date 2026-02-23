@@ -10,6 +10,7 @@ import {
   deleteProspect,
   deleteProspectsBulk,
   docToDisplay,
+  getProspect,
 } from "../../services/prospectsService";
 import { listUsers } from "../../services/usersService";
 import { listCallLogsForProspect } from "../../services/callLogsService";
@@ -31,216 +32,7 @@ const SCHEMA_FIELDS = [
   "permanentAddress",
   "mobile",
   "bloodgroup",
-  "aadhar",
-  "dateOfBirth",
-  "age",
-  "guardian",
-  "badgeId",
-  "gender",
-  "badgeStatus",
-  "emergencyContact",
-  "DeptFinalisedName",
-  "maritalStatus",
-  "locality",
-  "assignedTo",
-  "NamdaanDOI",
-  "namdaanInitiated",
-  "NamdaanInitiationBy",
-  "NamdaanInitiationPlace",
-];
-
-const REQUIRED_IMPORT_FIELDS = ["fullName", "mobile"];
-
-/** Normalize for matching: lowercase, remove spaces and non-alphanumeric */
-function normalizeHeader(str) {
-  return String(str ?? "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
-}
-
-/**
- * Excel column names (and truncated variants) → schema field.
- * Keys are normalized (lowercase, no spaces/special chars).
- * Includes short forms so "Blood Grou", "Aadhaar C", "Date of Bir", "Batch Num", "Dept Finali", "Marita" etc. match.
- */
-const EXCEL_HEADER_TO_SCHEMA = {
-  name: "fullName",
-  nam: "fullName",
-  fullname: "fullName",
-  prospect: "fullName",
-  nameofsewadarsewadarni: "fullName",
-  address: "address",
-  residentialaddress: "address",
-  residentialaddr: "address",
-  location: "address",
-  addr: "address",
-  phone: "mobile",
-  mobile: "mobile",
-  phoneno: "mobile",
-  contact: "mobile",
-  bloodgroup: "bloodgroup",
-  bloodgrou: "bloodgroup",
-  blood: "bloodgroup",
-  bg: "bloodgroup",
-  aadhaarcard: "aadhar",
-  aadhaarc: "aadhar",
-  aadhar: "aadhar",
-  dateofbirth: "dateOfBirth",
-  dateofbir: "dateOfBirth",
-  dob: "dateOfBirth",
-  age: "age",
-  guardianname: "guardian",
-  guardian: "guardian",
-  fathersname: "guardian",
-  batchnumber: "badgeId",
-  batchnum: "badgeId",
-  batch: "badgeId",
-  badgeid: "badgeId",
-  badge: "badgeId",
-  gender: "gender",
-  badgestatus: "badgeStatus",
-  badgestat: "badgeStatus",
-  emergencycontact: "emergencyContact",
-  emergency: "emergencyContact",
-  emerg: "emergencyContact",
-  deptfinalisedname: "DeptFinalisedName",
-  deptfinali: "DeptFinalisedName",
-  department: "DeptFinalisedName",
-  maritalstatus: "maritalStatus",
-  marita: "maritalStatus",
-  marital: "maritalStatus",
-  rovillagetownlocalitydistrict: "locality",
-  locality: "locality",
-  village: "locality",
-  namdaandoi: "NamdaanDOI",
-  namdaaninitiated: "namdaanInitiated",
-  namdaaninitiationby: "NamdaanInitiationBy",
-  namdaaninitiationplace: "NamdaanInitiationPlace",
-  permanentaddress: "permanentAddress",
-  permaddr: "permanentAddress",
-  permanantaddress: "permanentAddress",
-  // assignedTo is never set from import; admin assigns later
-};
-
-/** Also match headers that contain these keywords (after normalization) to handle variants like "Namadan Date of Initialisation" */
-const KEYWORD_TO_SCHEMA = [
-  ["dateofinitialisation", "NamdaanDOI"],
-  ["dateofinitiation", "NamdaanDOI"],
-  ["namadan", "NamdaanDOI"],
-  ["namdaan", "NamdaanDOI"],
-  ["doi", "NamdaanDOI"],
-  ["initiationby", "NamdaanInitiationBy"],
-  ["initiationplace", "NamdaanInitiationPlace"],
-  ["initiated", "namdaanInitiated"],
-];
-
-function matchExcelHeaderToSchemaField(excelHeader) {
-  const normalized = normalizeHeader(excelHeader);
-  if (!normalized) return null;
-
-  // 1. Exact normalized match
-  if (EXCEL_HEADER_TO_SCHEMA[normalized])
-    return EXCEL_HEADER_TO_SCHEMA[normalized];
-
-  // 2. Prefix match: truncated header (e.g. "bloodgrou") is prefix of a known key, or key is prefix of header
-  if (normalized.length >= 2) {
-    for (const key of Object.keys(EXCEL_HEADER_TO_SCHEMA)) {
-      if (key.startsWith(normalized) || normalized.startsWith(key))
-        return EXCEL_HEADER_TO_SCHEMA[key];
-    }
-  }
-
-  // 3. Normalized schema field name equals header
-  for (const field of SCHEMA_FIELDS) {
-    if (normalizeHeader(field) === normalized) return field;
-  }
-
-  // 4. Header contains keyword from KEYWORD_TO_SCHEMA
-  for (const [keyword, schemaField] of KEYWORD_TO_SCHEMA) {
-    if (normalized.includes(keyword)) return schemaField;
-  }
-
-  // 5. Header contains normalized schema field name
-  for (const field of SCHEMA_FIELDS) {
-    const nf = normalizeHeader(field);
-    if (nf && normalized.includes(nf)) return field;
-  }
-
-  return null;
-}
-
-/** Build auto-mapping: array of length headers.length, each element is schemaField string or null (unmapped) */
-function buildAutoMapping(excelHeaders) {
-  return excelHeaders.map((h) => matchExcelHeaderToSchemaField(h));
-}
-
-/** Parse Excel to raw headers and rows (no schema applied yet) */
-function parseExcelFileRaw(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: "array" });
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-        if (!json.length) {
-          resolve({ headers: [], rows: [] });
-          return;
-        }
-        const headers = json[0].map((h) => String(h ?? "").trim());
-        const rows = json
-          .slice(1)
-          .filter((row) =>
-            row.some((cell) => cell != null && String(cell).trim()),
-          );
-        resolve({ headers, rows });
-      } catch (err) {
-        reject(err);
-      }
-    };
-    reader.onerror = () => reject(reader.error);
-    reader.readAsArrayBuffer(file);
-  });
-}
-
-/** Build prospect objects from raw rows using columnIndex → schemaField mapping. Unmapped columns are skipped. */
-function buildProspectsFromMapping(rows, columnMapping) {
-  return rows.map((row) => {
-    const prospect = {};
-    columnMapping.forEach((schemaField, colIndex) => {
-      if (!schemaField || schemaField === "__skip__") return;
-      const raw = row[colIndex];
-      const value = raw == null || raw === "" ? "" : String(raw).trim();
-      prospect[schemaField] = value;
-    });
-    return prospect;
-  });
-}
-
-function getImportSignature(prospects) {
-  const rows = prospects
-    .map((p) =>
-      [
-        p.fullName ?? p.name,
-        p.address,
-        p.mobile,
-        p.badgeId,
-        p.assignedTo,
-        p.bloodgroup,
-      ].join("|"),
-    )
-    .sort();
-  return rows.join("\n");
-}
-
-/** Full DB export: all prospect fields (no Appwrite system fields) */
-const FULL_EXPORT_COLUMNS = [
-  "fullName",
-  "address",
-  "permanentAddress",
-  "mobile",
-  "bloodgroup",
+  "fatherHusbandName",
   "aadhar",
   "dateOfBirth",
   "age",
@@ -541,7 +333,14 @@ function ProspectsDetailsPage() {
         setError("No submitted calling form found for this prospect.");
         return;
       }
-      setViewCallLog({ prospect, log: docs[0] });
+      // fetch full prospect document so admin can view all fields
+      const full = await getProspect(prospect.id);
+      // pass both display prospect and full doc
+      setViewCallLog({
+        prospect: full ? docToDisplay(full) : prospect,
+        prospectDoc: full,
+        log: docs[0],
+      });
     } catch (err) {
       setError(err.message || "Failed to load calling form.");
     }
@@ -1314,7 +1113,7 @@ function ProspectsDetailsPage() {
         {/* View Call Log (filled calling form) */}
         {viewCallLog &&
           (() => {
-            const { prospect, log } = viewCallLog;
+            const { prospect, prospectDoc, log } = viewCallLog;
             let jathas = [];
             try {
               jathas =
@@ -1326,16 +1125,16 @@ function ProspectsDetailsPage() {
             }
 
             const handleDownload = () => {
-              const docPdf = new jsPDF();
+              const docPdf = new jsPDF({ unit: "pt", format: "a4" });
               const pageWidth = docPdf.internal.pageSize.getWidth();
               const pageHeight = docPdf.internal.pageSize.getHeight();
-              const marginX = 15;
-              const marginY = 15;
+              const marginX = 36;
+              const marginY = 36;
               const maxWidth = pageWidth - marginX * 2;
               let y = marginY;
+              const lineHeight = 14; // in points
 
-              // Helper to add a new page if needed
-              const checkNewPage = (requiredSpace = 10) => {
+              const checkNewPage = (requiredSpace = 60) => {
                 if (y + requiredSpace > pageHeight - marginY) {
                   docPdf.addPage();
                   y = marginY;
@@ -1344,192 +1143,236 @@ function ProspectsDetailsPage() {
                 return false;
               };
 
-              // Header with title
-              docPdf.setFillColor(220, 38, 38); // Red background
-              docPdf.rect(0, 0, pageWidth, 25, "F");
+              // Header
+              const headerH = 48;
+              docPdf.setFillColor(220, 38, 38);
+              docPdf.rect(0, 0, pageWidth, headerH, "F");
+              docPdf.setFontSize(20);
               docPdf.setTextColor(255, 255, 255);
-              docPdf.setFontSize(18);
               docPdf.setFont("helvetica", "bold");
-              docPdf.text("CALLING FORM", pageWidth / 2, 18, {
+              docPdf.text("CALLING FORM", pageWidth / 2, headerH / 2 + 6, {
                 align: "center",
+                baseline: "middle",
               });
               docPdf.setTextColor(0, 0, 0);
-              y = 35;
+              y = headerH + 12;
 
-              // Prospect Information Box
-              docPdf.setFillColor(241, 245, 249); // Light slate
-              docPdf.roundedRect(marginX, y, maxWidth, 30, 3, 3, "F");
-              docPdf.setFontSize(12);
-              docPdf.setFont("helvetica", "bold");
-              docPdf.text("PROSPECT INFORMATION", marginX + 5, y + 8);
-              docPdf.setFont("helvetica", "normal");
-              docPdf.setFontSize(10);
-              docPdf.text(`Name: ${prospect.name || "-"}`, marginX + 5, y + 15);
-              docPdf.text(
-                `Badge ID: ${prospect.badgeId || "-"}`,
-                marginX + 5,
-                y + 21,
-              );
-              docPdf.text(
-                `Phone: ${prospect.phoneNumber || "-"}`,
-                marginX + 100,
-                y + 15,
-              );
-              docPdf.text(
-                `Address: ${prospect.address || "-"}`,
-                marginX + 100,
-                y + 21,
-              );
-              y += 35;
+              // Prospect info - two columns
+              checkNewPage(120);
+              const colGap = 18;
+              const colWidth = Math.floor((maxWidth - colGap) / 2);
+              const leftX = marginX;
+              const rightX = marginX + colWidth + colGap;
+              const labelW = 90;
 
-              // Calling Data Select Option Section
-              checkNewPage(25);
-              docPdf.setFillColor(220, 38, 38);
-              docPdf.rect(marginX, y, maxWidth, 8, "F");
-              docPdf.setTextColor(255, 255, 255);
+              const full = prospectDoc || prospect;
+              const infoPairs = [
+                ["Name", full.fullName || full.name || "-"],
+                ["Badge ID", full.badgeId || full.batchNumber || "-"],
+                ["Phone", full.mobile || full.phoneNumber || "-"],
+                [
+                  "Father/Husband",
+                  full.fatherHusbandName ||
+                    full.fathersName ||
+                    full.husbandName ||
+                    "-",
+                ],
+                [
+                  "Address",
+                  full.address ||
+                    full.permanentAddress ||
+                    prospect.address ||
+                    "-",
+                ],
+                ["Guardian", full.guardian || "-"],
+                ["DOB", full.dateOfBirth || "-"],
+                ["Age", full.age || "-"],
+                ["Gender", full.gender || "-"],
+                ["Blood", full.bloodgroup || full.bloodGroup || "-"],
+                ["Dept", full.DeptFinalisedName || full.departmentName || "-"],
+                ["Assigned", full.assignedTo || "-"],
+                ["Aadhar", full.aadhar || "-"],
+                ["Emergency", full.emergencyContact || "-"],
+              ];
+
+              docPdf.setFillColor(245, 247, 250);
+              docPdf.roundedRect(
+                leftX - 6,
+                y - 6,
+                maxWidth + 12,
+                110,
+                6,
+                6,
+                "F",
+              );
               docPdf.setFontSize(11);
               docPdf.setFont("helvetica", "bold");
-              docPdf.text("CALLING DATA SELECT OPTION", marginX + 5, y + 6);
-              docPdf.setTextColor(0, 0, 0);
-              y += 12;
+              docPdf.text("PROSPECT INFORMATION", leftX, y + 6);
+              docPdf.setFont("helvetica", "normal");
+              docPdf.setFontSize(10);
 
-              const callingData = [
+              // Render two columns: pair items sequentially into left/right cols
+              let infoY = y + 20;
+              for (let i = 0; i < infoPairs.length; i += 2) {
+                const [lLabel, lVal] = infoPairs[i];
+                const [rLabel, rVal] = infoPairs[i + 1] || ["", ""];
+
+                // left
+                const leftValLines = docPdf.splitTextToSize(
+                  String(lVal || "-"),
+                  colWidth - labelW - 8,
+                );
+                docPdf.setFont("helvetica", "bold");
+                docPdf.text(`${lLabel}:`, leftX + 6, infoY);
+                docPdf.setFont("helvetica", "normal");
+                leftValLines.forEach((ln, idx) => {
+                  docPdf.text(
+                    ln,
+                    leftX + 6 + labelW,
+                    infoY + idx * (lineHeight - 6),
+                  );
+                });
+
+                // right
+                const rightValLines = docPdf.splitTextToSize(
+                  String(rVal || "-"),
+                  colWidth - labelW - 8,
+                );
+                docPdf.setFont("helvetica", "bold");
+                docPdf.text(`${rLabel}:`, rightX + 6, infoY);
+                docPdf.setFont("helvetica", "normal");
+                rightValLines.forEach((ln, idx) => {
+                  docPdf.text(
+                    ln,
+                    rightX + 6 + labelW,
+                    infoY + idx * (lineHeight - 6),
+                  );
+                });
+
+                const usedLines =
+                  Math.max(leftValLines.length, rightValLines.length) || 1;
+                infoY += usedLines * (lineHeight - 6) + 8;
+              }
+
+              y += 110 + 12;
+
+              const renderSection = (title, rows) => {
+                checkNewPage(60);
+                docPdf.setFillColor(220, 38, 38);
+                docPdf.rect(leftX, y, maxWidth, 22, "F");
+                docPdf.setTextColor(255, 255, 255);
+                docPdf.setFont("helvetica", "bold");
+                docPdf.setFontSize(12);
+                docPdf.text(title, leftX + 8, y + 15);
+                docPdf.setTextColor(0, 0, 0);
+                y += 28;
+
+                rows.forEach(([label, value]) => {
+                  checkNewPage(40);
+                  docPdf.setFontSize(10);
+                  docPdf.setFont("helvetica", "bold");
+                  docPdf.text(`${label}:`, leftX + 6, y);
+                  docPdf.setFont("helvetica", "normal");
+                  const valLines = docPdf.splitTextToSize(
+                    String(value || "-"),
+                    maxWidth - 90,
+                  );
+                  valLines.forEach((ln, idx) => {
+                    docPdf.text(ln, leftX + 96, y + idx * (lineHeight - 6));
+                  });
+                  y += Math.max(14, valLines.length * (lineHeight - 6)) + 6;
+                });
+                y += 6;
+              };
+
+              // Calling Data
+              renderSection("CALLING DATA SELECT OPTION", [
                 ["Select", log.select || "-"],
                 ["Call Back", log.callBack || "-"],
                 ["Not Interest", log.notInterest || "-"],
-              ];
-              callingData.forEach(([label, value]) => {
-                checkNewPage(8);
-                docPdf.setFontSize(10);
-                docPdf.setFont("helvetica", "normal");
-                docPdf.text(`${label}:`, marginX + 5, y);
-                docPdf.setFont("helvetica", "bold");
-                docPdf.text(value, marginX + 45, y);
-                y += 7;
-              });
-              y += 3;
+              ]);
 
-              // Transfer Data Section
-              checkNewPage(25);
-              docPdf.setFillColor(220, 38, 38);
-              docPdf.rect(marginX, y, maxWidth, 8, "F");
-              docPdf.setTextColor(255, 255, 255);
-              docPdf.setFontSize(11);
-              docPdf.setFont("helvetica", "bold");
-              docPdf.text("TRANSFER DATA", marginX + 5, y + 6);
-              docPdf.setTextColor(0, 0, 0);
-              y += 12;
-
-              const transferData = [
-                ["Nominal List Select", log.nominalListSelect || "-"],
+              // Transfer Data
+              renderSection("TRANSFER DATA", [
+                ["Nominal List", log.nominalListSelect || "-"],
                 ["Visit Select", log.visitSelect || "-"],
                 ["Free Sewa", log.freeSewa || "-"],
-              ];
-              transferData.forEach(([label, value]) => {
-                checkNewPage(8);
-                docPdf.setFontSize(10);
-                docPdf.setFont("helvetica", "normal");
-                docPdf.text(`${label}:`, marginX + 5, y);
-                docPdf.setFont("helvetica", "bold");
-                docPdf.text(value, marginX + 60, y);
-                y += 7;
-              });
-              y += 3;
+              ]);
 
-              // Need to Work Section
-              checkNewPage(30);
-              docPdf.setFillColor(220, 38, 38);
-              docPdf.rect(marginX, y, maxWidth, 8, "F");
-              docPdf.setTextColor(255, 255, 255);
-              docPdf.setFontSize(11);
-              docPdf.setFont("helvetica", "bold");
-              docPdf.text("NEED TO WORK", marginX + 5, y + 6);
-              docPdf.setTextColor(0, 0, 0);
-              y += 12;
-
-              const needToWork = [
+              // Need to Work
+              renderSection("NEED TO WORK", [
                 ["Good participation", log.notes1 || "-"],
                 ["Positive", log.notes2 || "-"],
                 ["VIP prospect", log.notes3 || "-"],
-              ];
-              needToWork.forEach(([label, value]) => {
-                checkNewPage(12);
+              ]);
+
+              // Jatha table
+              if (Array.isArray(jathas) && jathas.length > 0) {
+                checkNewPage(60);
+                docPdf.setFillColor(220, 38, 38);
+                docPdf.rect(leftX, y, maxWidth, 22, "F");
+                docPdf.setTextColor(255, 255, 255);
+                docPdf.setFont("helvetica", "bold");
+                docPdf.setFontSize(12);
+                docPdf.text("JATHA DETAILS", leftX + 8, y + 15);
+                docPdf.setTextColor(0, 0, 0);
+                y += 28;
+
+                // table header
+                docPdf.setFillColor(245, 247, 250);
+                docPdf.rect(leftX, y, maxWidth, 20, "F");
                 docPdf.setFontSize(10);
                 docPdf.setFont("helvetica", "bold");
-                docPdf.text(`${label}:`, marginX + 5, y);
+                const c1 = leftX + 6;
+                const c2 = leftX + 200;
+                const c3 = leftX + 340;
+                const c4 = leftX + 420;
+                const c5 = leftX + 500;
+                docPdf.text("#", c1, y + 14);
+                docPdf.text("Area Name", c1 + 18, y + 14);
+                docPdf.text("Department", c2, y + 14);
+                docPdf.text("Days", c3, y + 14);
+                docPdf.text("Date From", c4, y + 14);
+                docPdf.text("Date To", c5, y + 14);
+                y += 26;
+
                 docPdf.setFont("helvetica", "normal");
-                const valueX = marginX + 45;
-                const chunks = docPdf.splitTextToSize(
-                  value || "-",
-                  maxWidth - (valueX - marginX) - 5,
-                );
-                // print value chunks starting at an offset so they don't overlap the label
-                chunks.forEach((chunk) => {
-                  checkNewPage(8);
-                  docPdf.text(chunk, valueX, y);
-                  y += 7;
-                });
-                y += 4;
-              });
-              y += 3;
-
-              // Jatha Details Section
-              if (Array.isArray(jathas) && jathas.length > 0) {
-                checkNewPage(30);
-                docPdf.setFillColor(220, 38, 38);
-                docPdf.rect(marginX, y, maxWidth, 8, "F");
-                docPdf.setTextColor(255, 255, 255);
-                docPdf.setFontSize(11);
-                docPdf.setFont("helvetica", "bold");
-                docPdf.text("JATHA DETAILS", marginX + 5, y + 6);
-                docPdf.setTextColor(0, 0, 0);
-                y += 12;
-
-                // Table header
-                checkNewPage(15);
-                docPdf.setFillColor(241, 245, 249);
-                docPdf.rect(marginX, y, maxWidth, 8, "F");
-                docPdf.setFontSize(9);
-                docPdf.setFont("helvetica", "bold");
-                docPdf.text("Area Name", marginX + 5, y + 5);
-                docPdf.text("Department", marginX + 50, y + 5);
-                docPdf.text("Days", marginX + 100, y + 5);
-                docPdf.text("Date From", marginX + 120, y + 5);
-                docPdf.text("Date To", marginX + 160, y + 5);
-                y += 10;
-
-                // Table rows
+                docPdf.setFontSize(10);
                 jathas.forEach((j, i) => {
-                  checkNewPage(10);
-                  docPdf.setFontSize(9);
-                  docPdf.setFont("helvetica", "normal");
-                  docPdf.text(`${i + 1}.`, marginX + 2, y);
-                  docPdf.text(j.areaName || "-", marginX + 8, y);
-                  docPdf.text(j.departmentName || "-", marginX + 50, y);
-                  docPdf.text(j.jathaTotalDay || "-", marginX + 100, y);
-                  docPdf.text(j.dateFrom || "-", marginX + 120, y);
-                  docPdf.text(j.dateTo || "-", marginX + 160, y);
-                  y += 7;
+                  checkNewPage(20);
+                  docPdf.text(`${i + 1}.`, c1, y + 12);
+                  docPdf.text(j.areaName || "-", c1 + 18, y + 12);
+                  docPdf.text(j.departmentName || "-", c2, y + 12);
+                  docPdf.text(String(j.jathaTotalDay || "-"), c3, y + 12);
+                  docPdf.text(j.dateFrom || "-", c4, y + 12);
+                  docPdf.text(j.dateTo || "-", c5, y + 12);
+                  y += 18;
                 });
+                y += 8;
               }
 
               // Footer
-              const totalPages = docPdf.internal.pages.length - 1;
+              const totalPages =
+                typeof docPdf.getNumberOfPages === "function"
+                  ? docPdf.getNumberOfPages()
+                  : docPdf.internal.pages
+                    ? docPdf.internal.pages.length - 1
+                    : 1;
               for (let i = 1; i <= totalPages; i++) {
                 docPdf.setPage(i);
-                docPdf.setFontSize(8);
-                docPdf.setTextColor(128, 128, 128);
+                docPdf.setFontSize(9);
+                docPdf.setTextColor(120, 120, 120);
                 docPdf.text(
                   `Submitted by: ${log.submittedBy} | Date: ${new Date(log.$createdAt).toLocaleDateString()}`,
                   pageWidth / 2,
-                  pageHeight - 8,
+                  pageHeight - 30,
                   { align: "center" },
                 );
                 docPdf.text(
                   `Page ${i} of ${totalPages}`,
-                  pageWidth / 2,
-                  pageHeight - 5,
-                  { align: "center" },
+                  pageWidth - marginX,
+                  pageHeight - 30,
+                  { align: "right" },
                 );
               }
 
@@ -1632,38 +1475,135 @@ function ProspectsDetailsPage() {
                         </h3>
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2">
-                        <div>
-                          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                            Name
-                          </p>
-                          <p className="mt-1 text-sm font-semibold text-slate-900">
-                            {prospect.name || "-"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                            Badge ID
-                          </p>
-                          <p className="mt-1 text-sm font-semibold text-slate-900">
-                            {prospect.badgeId || "-"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                            Phone Number
-                          </p>
-                          <p className="mt-1 text-sm font-semibold text-slate-900">
-                            {prospect.phoneNumber || "-"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                            Address
-                          </p>
-                          <p className="mt-1 text-sm font-semibold text-slate-900">
-                            {prospect.address || "-"}
-                          </p>
-                        </div>
+                        {(() => {
+                          const full = viewCallLog.prospectDoc || prospect;
+                          const name = full.fullName || full.name || "-";
+                          const badge = full.badgeId || full.batchNumber || "-";
+                          const phone = full.mobile || full.phoneNumber || "-";
+                          const address =
+                            full.address ||
+                            full.permanentAddress ||
+                            prospect.address ||
+                            "-";
+                          const father =
+                            full.fatherHusbandName ||
+                            full.fathersName ||
+                            full.husbandName ||
+                            "-";
+                          const guardian = full.guardian || "-";
+                          const dob = full.dateOfBirth || "-";
+                          const age = full.age || "-";
+                          const gender = full.gender || "-";
+                          const blood =
+                            full.bloodgroup || full.bloodGroup || "-";
+                          const dept =
+                            full.DeptFinalisedName ||
+                            full.departmentName ||
+                            "-";
+                          const assigned = full.assignedTo || "-";
+                          const aadhar = full.aadhar || "-";
+                          const emergency = full.emergencyContact || "-";
+                          return (
+                            <>
+                              <div>
+                                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                  Name
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-900">
+                                  {name}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                  Badge ID
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-900">
+                                  {badge}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                  Phone Number
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-900">
+                                  {phone}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                  Address
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-900">
+                                  {address}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                  Father / Husband
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-900">
+                                  {father}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                  Guardian
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-900">
+                                  {guardian}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                  DOB
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-900">
+                                  {dob}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                  Age / Gender
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-900">
+                                  {age} / {gender}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                  Blood Group
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-900">
+                                  {blood}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                  Department
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-900">
+                                  {dept}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                  Assigned To
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-900">
+                                  {assigned}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                  Aadhar / Emergency
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-900">
+                                  {aadhar} / {emergency}
+                                </p>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
 
