@@ -77,6 +77,7 @@ Stores call form submissions from users/employees when they complete a call with
    - `prospectId`
    - `prospectName`
    - `submittedBy`
+   - `select`
    - `callBack`
    - `notInterest`
    - `needToWork`
@@ -85,7 +86,8 @@ Stores call form submissions from users/employees when they complete a call with
    - `visitSelect`
    - `freeSewa`
    - `jathaDetails` (stores JSON string)
-4. Add `VITE_APPWRITE_CALLLOGS_COLLECTION_ID=callLogs` to your `.env`.
+4. For faster queries, add **indexes** on: `submittedBy`, `prospectId`, and optionally `nominalListSelect`. (If missing, the app falls back to client-side filtering.)
+5. Add `VITE_APPWRITE_CALLLOGS_COLLECTION_ID=callLogs` to your `.env`.
 
 #### 3.5 Prospects Storage Bucket (optional)
 

@@ -1,705 +1,418 @@
-import { useState, useEffect, useCallback } from "react";
-import { useAuth } from "../services/AuthContext";
-import {
-  listProspectsAssignedTo,
-  docToDisplay,
-  createProspect,
-} from "../services/prospectsService";
-import {
-  createCallLog,
-  updateCallLog,
-  listCallLogsForUser,
-} from "../services/callLogsService";
+import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '../services/AuthContext'
+import { listProspectsAssignedTo, docToDisplay } from '../services/prospectsService'
+import { createCallLog, updateCallLog, listCallLogsForUser } from '../services/callLogsService'
 
-const SEARCH_BY_OPTIONS = [
-  "Name of Sewadar/Sewadarni",
-  "Address",
-  "Phone Number",
-  "Badge ID",
-  "Blood Group",
-];
+const SEARCH_BY_OPTIONS = ['Name of Sewadar/Sewadarni', 'Address', 'Phone Number', 'Badge ID', 'Blood Group']
 
 function getAttr(doc, ...keys) {
-  if (!doc || typeof doc !== "object") return "";
+  if (!doc || typeof doc !== 'object') return ''
   for (const k of keys) {
-    const v = doc[k];
-    if (v !== undefined && v !== null && String(v).trim() !== "")
-      return String(v).trim();
+    const v = doc[k]
+    if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim()
   }
-  return "";
+  return ''
 }
 
 const INITIAL_FORM = {
-  select: "",
-  callBack: "",
-  notInterest: "",
-  needToWork: "",
-  notes1: "",
-  notes2: "",
-  notes3: "",
-  nominalListSelect: "",
-  visitSelect: "",
-  freeSewa: "N/A",
+  select: '',
+  callBack: '',
+  notInterest: '',
+  departmentOfSewa: '',
+  needToWork: '',
+  notes1: '',
+  notes2: '',
+  notes3: '',
+  nominalListSelect: '',
+  visitSelect: '',
+  freeSewa: 'N/A',
+  attendance: '',
+  jathaRecord: '',
   jathaDetails: [],
-};
+}
 
-const INITIAL_JATHA = {
-  areaName: "",
-  departmentName: "",
-  jathaTotalDay: "",
-  dateFrom: "",
-  dateTo: "",
-};
+const INITIAL_JATHA = { areaName: '', departmentName: '', jathaTotalDay: '', dateFrom: '', dateTo: '' }
 
 function UserDashboard() {
-  const { user } = useAuth();
-  const [prospects, setProspects] = useState([]);
-  const [prospectDocs, setProspectDocs] = useState({});
-  const [searchBy, setSearchBy] = useState("Name of Sewadar/Sewadarni");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [formOpen, setFormOpen] = useState(false);
-  const [viewOnly, setViewOnly] = useState(false);
-  const [selectedProspect, setSelectedProspect] = useState(null);
-  const [selectedDoc, setSelectedDoc] = useState(null);
-  const [form, setForm] = useState(INITIAL_FORM);
-  const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState("");
-  const [userCallLogsByProspect, setUserCallLogsByProspect] = useState({});
-  const [editingCallLogId, setEditingCallLogId] = useState(null);
-  const [openMenu, setOpenMenu] = useState(null);
-  const [addModalOpen, setAddModalOpen] = useState(false);
-  const [addForm, setAddForm] = useState({
-    name: "",
-    fathersName: "",
-    mobileNumber: "",
-    age: "",
-    departmentName: "",
-    badgeStatus: "N/A",
-    badgeId: "",
-    gender: "Male",
-    aadharNumber: "",
-    dateOfBirth: "",
-    emergencyContact: "",
-    bloodgroup: "",
-    locality: "",
-    fullAddress: "",
-    permanentAddress: "",
-    maritalStatus: "N/A",
-    initiated: false,
-    dateOfInitiation: "",
-    initiationBy: "",
-    initiationPlace: "",
-  });
-  const [addSubmitting, setAddSubmitting] = useState(false);
+  const { user } = useAuth()
+  const [prospects, setProspects] = useState([])
+  const [prospectDocs, setProspectDocs] = useState({})
+  const [searchBy, setSearchBy] = useState('Name of Sewadar/Sewadarni')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [formOpen, setFormOpen] = useState(false)
+  const [viewOnly, setViewOnly] = useState(false)
+  const [selectedProspect, setSelectedProspect] = useState(null)
+  const [selectedDoc, setSelectedDoc] = useState(null)
+  const [form, setForm] = useState(INITIAL_FORM)
+  const [submitting, setSubmitting] = useState(false)
+  const [success, setSuccess] = useState('')
+  const [userCallLogsByProspect, setUserCallLogsByProspect] = useState({})
+  const [editingLogId, setEditingLogId] = useState(null)
 
   const loadAssigned = useCallback(async () => {
-    const email = user?.email;
+    const email = user?.email
     if (!email) {
-      setProspects([]);
-      setProspectDocs({});
-      return;
+      setProspects([])
+      setProspectDocs({})
+      return
     }
-    setLoading(true);
-    setError("");
+    setLoading(true)
+    setError('')
     try {
-      const res = await listProspectsAssignedTo(email);
-      const docs = res.documents || [];
-      const display = docs.map(docToDisplay);
-      const byId = {};
-      docs.forEach((d) => {
-        byId[d.$id] = d;
-      });
-      setProspects(display);
-      setProspectDocs(byId);
+      const res = await listProspectsAssignedTo(email)
+      const docs = res.documents || []
+      const display = docs.map(docToDisplay)
+      const byId = {}
+      docs.forEach((d) => { byId[d.$id] = d })
+      setProspects(display)
+      setProspectDocs(byId)
     } catch (err) {
-      setError(err.message || "Failed to load assigned prospects.");
+      setError(err.message || 'Failed to load assigned prospects.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [user?.email]);
+  }, [user?.email])
 
   useEffect(() => {
-    loadAssigned();
-  }, [loadAssigned]);
+    loadAssigned()
+  }, [loadAssigned])
 
   useEffect(() => {
     async function loadUserCallLogs() {
-      const email = user?.email;
+      const email = user?.email
       if (!email) {
-        setUserCallLogsByProspect({});
-        return;
+        setUserCallLogsByProspect({})
+        return
       }
       try {
-        const res = await listCallLogsForUser(email);
-        const docs = res.documents || [];
-        const byProspect = {};
+        const res = await listCallLogsForUser(email)
+        const docs = res.documents || []
+        const byProspect = {}
         docs.forEach((d) => {
-          if (!d.prospectId) return;
-          // Store the most recent call log for each prospect
-          if (
-            !byProspect[d.prospectId] ||
-            new Date(d.$createdAt) >
-              new Date(byProspect[d.prospectId].$createdAt)
-          ) {
-            byProspect[d.prospectId] = d;
-          }
-        });
-        setUserCallLogsByProspect(byProspect);
+          if (!d.prospectId) return
+          if (!byProspect[d.prospectId]) byProspect[d.prospectId] = d
+        })
+        setUserCallLogsByProspect(byProspect)
       } catch {
         // ignore; user can still submit forms
       }
     }
-    loadUserCallLogs();
-  }, [user?.email]);
+    loadUserCallLogs()
+  }, [user?.email])
 
   const baseFiltered = prospects.filter((p) => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return true;
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return true
     const field = {
-      "Name of Sewadar/Sewadarni": p.name,
+      'Name of Sewadar/Sewadarni': p.name,
       Address: p.address,
-      "Phone Number": p.phoneNumber,
-      "Badge ID": p.badgeId,
-      "Blood Group": p.bloodGroup,
-    }[searchBy];
-    return String(field || "")
-      .toLowerCase()
-      .includes(q);
-  });
+      'Phone Number': p.phoneNumber,
+      'Badge ID': p.badgeId,
+      'Blood Group': p.bloodGroup,
+    }[searchBy]
+    return String(field || '').toLowerCase().includes(q)
+  })
 
-  const updateForm = (field) => (e) =>
-    setForm((f) => ({ ...f, [field]: e.target.value }));
-
-  const updateAddForm = (field) => (e) =>
-    setAddForm((f) => ({ ...f, [field]: e.target.value }));
-  const updateAddFormRadio = (field) => (e) =>
-    setAddForm((f) => ({ ...f, [field]: e.target.value }));
-
-  function calculateAgeFromDob(dateStr) {
-    if (!dateStr) return "";
-    const dob = new Date(dateStr);
-    if (Number.isNaN(dob.getTime())) return "";
-    const today = new Date();
-    let age = today.getFullYear() - dob.getFullYear();
-    const m = today.getMonth() - dob.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
-      age--;
-    }
-    return age >= 0 ? String(age) : "";
-  }
-
-  const openAddModal = () => {
-    setAddForm({
-      fullName: "",
-      mobile: "",
-      address: "",
-      badgeId: "",
-      fatherHusbandName: "",
-      departmentName: "",
-      dateOfBirth: "",
-      aadhar: "",
-      emergencyContact: "",
-      bloodgroup: "",
-    });
-    setAddModalOpen(true);
-    setError("");
-    setSuccess("");
-  };
-
-  const closeAddModal = () => {
-    setAddModalOpen(false);
-    setAddForm({});
-  };
-
-  const handleSubmitAddProspect = async (e) => {
-    e.preventDefault();
-    if (!addForm.name || !addForm.mobileNumber) {
-      setError("Name and Mobile Number are required to add a prospect.");
-      return;
-    }
-    setAddSubmitting(true);
-    setError("");
-    try {
-      await createProspect({
-        name: addForm.name,
-        fathersName: addForm.fathersName,
-        mobileNumber: addForm.mobileNumber,
-        age: addForm.age,
-        departmentName: addForm.departmentName,
-        badgeStatus: addForm.badgeStatus,
-        badgeId: addForm.badgeId,
-        gender: addForm.gender,
-        aadharNumber: addForm.aadharNumber,
-        dateOfBirth: addForm.dateOfBirth,
-        emergencyContact: addForm.emergencyContact,
-        bloodgroup: addForm.bloodgroup,
-        locality: addForm.locality,
-        fullAddress: addForm.fullAddress,
-        permanentAddress: addForm.permanentAddress,
-        maritalStatus: addForm.maritalStatus,
-        initiated: addForm.initiated,
-        dateOfInitiation: addForm.dateOfInitiation,
-        initiationBy: addForm.initiationBy,
-        initiationPlace: addForm.initiationPlace,
-      });
-      setSuccess("Prospect added successfully. Admin will assign if needed.");
-      setTimeout(async () => {
-        closeAddModal();
-        await loadAssigned();
-      }, 800);
-    } catch (err) {
-      setError(err.message || "Failed to add prospect.");
-    } finally {
-      setAddSubmitting(false);
-    }
-  };
+  const updateForm = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
 
   function openForm(prospect, options = {}) {
-    const mode = options.mode || "edit";
-    setSelectedProspect(prospect);
-    setSelectedDoc(prospectDocs[prospect.id] || null);
-    const existingLog = userCallLogsByProspect[prospect.id];
-    if (mode === "view" && existingLog) {
-      let jatha = [];
+    const mode = options.mode || 'edit'
+    setSelectedProspect(prospect)
+    setSelectedDoc(prospectDocs[prospect.id] || null)
+    const existingLog = userCallLogsByProspect[prospect.id]
+    if ((mode === 'view' || mode === 'edit') && existingLog) {
+      let jatha = []
       try {
         jatha =
-          typeof existingLog.jathaDetails === "string"
-            ? JSON.parse(existingLog.jathaDetails || "[]")
-            : existingLog.jathaDetails || [];
+          typeof existingLog.jathaDetails === 'string'
+            ? JSON.parse(existingLog.jathaDetails || '[]')
+            : existingLog.jathaDetails || []
       } catch {
-        jatha = [];
+        jatha = []
       }
       setForm({
-        select: existingLog.select || "",
-        callBack: existingLog.callBack || "",
-        notInterest: existingLog.notInterest || "",
-        needToWork: existingLog.needToWork || "",
-        notes1: existingLog.notes1 || "",
-        notes2: existingLog.notes2 || "",
-        notes3: existingLog.notes3 || "",
-        nominalListSelect: existingLog.nominalListSelect || "",
-        visitSelect: existingLog.visitSelect || "",
-        freeSewa: existingLog.freeSewa || "N/A",
+        select: existingLog.select || '',
+        callBack: existingLog.callBack || '',
+        notInterest: existingLog.notInterest || '',
+        departmentOfSewa: existingLog.departmentOfSewa || '',
+        needToWork: existingLog.needToWork || '',
+        notes1: existingLog.notes1 || '',
+        notes2: existingLog.notes2 || '',
+        notes3: existingLog.notes3 || '',
+        nominalListSelect: existingLog.nominalListSelect || '',
+        visitSelect: existingLog.visitSelect || '',
+        freeSewa: existingLog.freeSewa || 'N/A',
+        attendance: existingLog.attendance || '',
+        jathaRecord: existingLog.jathaRecord || '',
         jathaDetails: Array.isArray(jatha) ? jatha : [],
-      });
-      setViewOnly(true);
-      setEditingCallLogId(null);
-    } else if (mode === "edit" && existingLog) {
-      // Edit existing form
-      let jatha = [];
-      try {
-        jatha =
-          typeof existingLog.jathaDetails === "string"
-            ? JSON.parse(existingLog.jathaDetails || "[]")
-            : existingLog.jathaDetails || [];
-      } catch {
-        jatha = [];
-      }
-      setForm({
-        select: existingLog.select || "",
-        callBack: existingLog.callBack || "",
-        notInterest: existingLog.notInterest || "",
-        needToWork: existingLog.needToWork || "",
-        notes1: existingLog.notes1 || "",
-        notes2: existingLog.notes2 || "",
-        notes3: existingLog.notes3 || "",
-        nominalListSelect: existingLog.nominalListSelect || "",
-        visitSelect: existingLog.visitSelect || "",
-        freeSewa: existingLog.freeSewa || "N/A",
-        jathaDetails: Array.isArray(jatha) ? jatha : [],
-      });
-      setViewOnly(false);
-      setEditingCallLogId(existingLog.$id);
+      })
+      setViewOnly(mode === 'view')
+      setEditingLogId(mode === 'edit' ? existingLog.$id : null)
     } else {
-      setForm(INITIAL_FORM);
-      setViewOnly(false);
-      setEditingCallLogId(null);
+      setForm(INITIAL_FORM)
+      setViewOnly(false)
+      setEditingLogId(null)
     }
-    setSuccess("");
-    setFormOpen(true);
+    setSuccess('')
+    setFormOpen(true)
   }
 
   function closeForm() {
-    setFormOpen(false);
-    setSelectedProspect(null);
-    setSelectedDoc(null);
-    setForm(INITIAL_FORM);
-    setViewOnly(false);
-    setEditingCallLogId(null);
+    setFormOpen(false)
+    setSelectedProspect(null)
+    setSelectedDoc(null)
+    setForm(INITIAL_FORM)
+    setViewOnly(false)
+    setEditingLogId(null)
   }
 
   function addJatha() {
-    setForm((f) => ({
-      ...f,
-      jathaDetails: [...f.jathaDetails, { ...INITIAL_JATHA }],
-    }));
+    setForm((f) => ({ ...f, jathaDetails: [...f.jathaDetails, { ...INITIAL_JATHA }] }))
   }
 
   function updateJatha(index, field, value) {
     setForm((f) => ({
       ...f,
-      jathaDetails: f.jathaDetails.map((j, i) =>
-        i === index ? { ...j, [field]: value } : j,
-      ),
-    }));
+      jathaDetails: f.jathaDetails.map((j, i) => (i === index ? { ...j, [field]: value } : j)),
+    }))
   }
 
   function removeJatha(index) {
-    setForm((f) => ({
-      ...f,
-      jathaDetails: f.jathaDetails.filter((_, i) => i !== index),
-    }));
+    setForm((f) => ({ ...f, jathaDetails: f.jathaDetails.filter((_, i) => i !== index) }))
   }
 
   async function handleSubmit(e) {
-    e.preventDefault();
-    if (viewOnly) return;
-    if (!selectedProspect || !user?.email) return;
-    setSubmitting(true);
-    setError("");
-    setSuccess("");
+    e.preventDefault()
+    if (viewOnly) return
+    if (!selectedProspect || !user?.email) return
+    setSubmitting(true)
+    setError('')
+    setSuccess('')
     try {
-      const payload = {
-        prospectId: selectedProspect.id,
-        prospectName: selectedProspect.name,
-        submittedBy: user.email,
-        select: form.select,
-        callBack: form.callBack,
-        notInterest: form.notInterest,
-        needToWork: form.needToWork,
-        notes1: form.notes1,
-        notes2: form.notes2,
-        notes3: form.notes3,
-        nominalListSelect: form.nominalListSelect,
-        visitSelect: form.visitSelect,
-        freeSewa: form.freeSewa,
-        jathaDetails: form.jathaDetails,
-      };
-
-      if (editingCallLogId) {
-        // Update existing call log
-        await updateCallLog(editingCallLogId, payload);
-        setSuccess(
-          "Form updated successfully. Admin can view it in the dashboard.",
-        );
+      if (editingLogId) {
+        await updateCallLog(editingLogId, {
+          select: form.select,
+          callBack: form.callBack,
+          notInterest: form.notInterest,
+          departmentOfSewa: form.departmentOfSewa,
+          needToWork: form.needToWork,
+          notes1: form.notes1,
+          notes2: form.notes2,
+          notes3: form.notes3,
+          nominalListSelect: form.nominalListSelect,
+          visitSelect: form.visitSelect,
+          freeSewa: form.freeSewa,
+          attendance: form.attendance,
+          jathaRecord: form.jathaRecord,
+          jathaDetails: form.jathaDetails,
+        })
+        setSuccess('Form updated successfully.')
       } else {
-        // Create new call log
-        await createCallLog(payload);
-        setSuccess(
-          "Form submitted successfully. Admin can view it in the dashboard.",
-        );
+        await createCallLog({
+          prospectId: selectedProspect.id,
+          prospectName: selectedProspect.name,
+          submittedBy: user.email,
+          select: form.select,
+          callBack: form.callBack,
+          notInterest: form.notInterest,
+          departmentOfSewa: form.departmentOfSewa,
+          needToWork: form.needToWork,
+          notes1: form.notes1,
+          notes2: form.notes2,
+          notes3: form.notes3,
+          nominalListSelect: form.nominalListSelect,
+          visitSelect: form.visitSelect,
+          freeSewa: form.freeSewa,
+          attendance: form.attendance,
+          jathaRecord: form.jathaRecord,
+          jathaDetails: form.jathaDetails,
+        })
+        setSuccess('Form submitted successfully.')
       }
-
-      setTimeout(() => {
-        closeForm();
-        loadAssigned();
-      }, 1500);
+      // Refresh call logs so buttons switch to View/Edit
+      try {
+        const res = await listCallLogsForUser(user.email)
+        const docs = res.documents || []
+        const byProspect = {}
+        docs.forEach((d) => {
+          if (!d.prospectId) return
+          if (!byProspect[d.prospectId]) byProspect[d.prospectId] = d
+        })
+        setUserCallLogsByProspect(byProspect)
+      } catch {
+        // ignore
+      }
+      setTimeout(() => closeForm(), 1500)
     } catch (err) {
-      setError(err.message || "Failed to submit form.");
+      setError(err.message || 'Failed to submit form.')
     } finally {
-      setSubmitting(false);
+      setSubmitting(false)
     }
   }
 
-  const doc = selectedDoc;
+  const doc = selectedDoc
 
   return (
     <div className="space-y-3 sm:space-y-5">
-      <header>
-        <h1 className="text-base font-semibold text-slate-900 sm:text-xl">
-          Prospects Details
-        </h1>
-      </header>
+        <header>
+          <h1 className="text-base font-semibold text-slate-900 sm:text-xl">Prospects Details</h1>
+        </header>
 
-      <div className="overflow-hidden rounded-lg bg-white p-2.5 shadow-sm sm:rounded-xl sm:p-4">
-        {/* Search */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-          <div className="flex w-full flex-1 flex-col gap-2 sm:flex-row sm:items-center">
-            <select
-              value={searchBy}
-              onChange={(e) => setSearchBy(e.target.value)}
-              className="w-full rounded-md border border-slate-200 px-2.5 py-2 text-xs text-slate-700 sm:w-auto sm:rounded-lg sm:px-3 sm:text-sm"
-            >
-              {SEARCH_BY_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>
-                  Search by {opt}
-                </option>
-              ))}
-            </select>
-            <div className="relative w-full sm:min-w-[180px] sm:flex-1">
-              <svg
-                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+        <div className="overflow-hidden rounded-lg bg-white p-2.5 shadow-sm sm:rounded-xl sm:p-4">
+          {/* Search */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+            <div className="flex w-full flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+              <select
+                value={searchBy}
+                onChange={(e) => setSearchBy(e.target.value)}
+                className="w-full rounded-md border border-slate-200 px-2.5 py-2 text-xs text-slate-700 sm:w-auto sm:rounded-lg sm:px-3 sm:text-sm"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                {SEARCH_BY_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>Search by {opt}</option>
+                ))}
+              </select>
+              <div className="relative w-full sm:min-w-[180px] sm:flex-1">
+                <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search..."
+                  className="w-full rounded-md border border-slate-200 py-2 pl-8 pr-2 text-xs outline-none focus:border-slate-400 sm:rounded-lg sm:pl-9 sm:pr-3 sm:text-sm"
                 />
-              </svg>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search..."
-                className="w-full rounded-md border border-slate-200 py-2 pl-8 pr-2 text-xs outline-none focus:border-slate-400 sm:rounded-lg sm:pl-9 sm:pr-3 sm:text-sm"
-              />
+              </div>
             </div>
           </div>
-          <div className="mt-3 flex justify-end">
-            <button
-              type="button"
-              onClick={openAddModal}
-              className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-xs font-medium text-white hover:bg-slate-900"
-            >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-              Add Prospect
-            </button>
-          </div>
-        </div>
 
-        {error && (
-          <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+          )}
 
-        {/* Table / Cards */}
-        <div className="mt-3 overflow-x-auto rounded-lg sm:mt-4 sm:overflow-visible sm:rounded-xl">
-          {loading ? (
-            <div className="rounded-lg border border-slate-200 bg-slate-50/50 px-6 py-12 text-center">
-              <p className="text-sm text-slate-500">
-                Loading your assigned prospects…
-              </p>
-            </div>
-          ) : baseFiltered.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/50 px-6 py-12 text-center">
-              <p className="text-sm font-medium text-slate-600">
-                No prospects assigned to you yet
-              </p>
-              <p className="mt-1 text-sm text-slate-500">
-                The admin will assign prospects from the Prospects Details page.
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* Mobile card view */}
-              <div className="flex flex-col gap-2 md:hidden">
-                {baseFiltered.map((p) => {
-                  const existingLog = userCallLogsByProspect[p.id];
-                  const hasLog = !!existingLog;
-                  return (
-                    <div
-                      key={p.id}
-                      className="flex items-start justify-between gap-2 rounded-lg border border-slate-200 bg-white p-3"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-slate-900">
-                          {p.name || "-"}
-                        </p>
-                        <p className="mt-0.5 truncate text-xs text-slate-600">
-                          {p.address || "-"}
-                        </p>
-                        <p className="mt-0.5 text-xs text-slate-600">
-                          {p.phoneNumber || "-"}
-                        </p>
-                        <p className="mt-0.5 text-[11px] text-slate-500">
-                          ID:{p.badgeId || "-"} · {p.bloodGroup || "-"}
-                        </p>
-                      </div>
-                      <div className="shrink-0 relative">
-                        {hasLog ? (
-                          <>
+          {/* Table / Cards */}
+          <div className="mt-3 overflow-x-auto rounded-lg sm:mt-4 sm:overflow-visible sm:rounded-xl">
+            {loading ? (
+              <div className="rounded-lg border border-slate-200 bg-slate-50/50 px-6 py-12 text-center">
+                <p className="text-sm text-slate-500">Loading your assigned prospects…</p>
+              </div>
+            ) : baseFiltered.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/50 px-6 py-12 text-center">
+                <p className="text-sm font-medium text-slate-600">No prospects assigned to you yet</p>
+                <p className="mt-1 text-sm text-slate-500">The admin will assign prospects from the Prospects Details page.</p>
+              </div>
+            ) : (
+              <>
+                {/* Mobile card view */}
+                <div className="flex flex-col gap-2 md:hidden">
+                  {baseFiltered.map((p) => {
+                    const existingLog = userCallLogsByProspect[p.id]
+                    const hasLog = !!existingLog
+                    return (
+                      <div key={p.id} className="flex items-start justify-between gap-2 rounded-lg border border-slate-200 bg-white p-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-slate-900">{p.name || '-'}</p>
+                          <p className="mt-0.5 truncate text-xs text-slate-600">{p.address || '-'}</p>
+                          <p className="mt-0.5 text-xs text-slate-600">{p.phoneNumber || '-'}</p>
+                          <p className="mt-0.5 text-[11px] text-slate-500">ID:{p.badgeId || '-'} · {p.bloodGroup || '-'}</p>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          {hasLog ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => openForm(p, { mode: 'view' })}
+                                className="shrink-0 rounded-lg bg-slate-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
+                              >
+                                View Form
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openForm(p, { mode: 'edit' })}
+                                className="shrink-0 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700"
+                              >
+                                Edit Form
+                              </button>
+                            </>
+                          ) : (
                             <button
                               type="button"
-                              onClick={() =>
-                                setOpenMenu(openMenu === p.id ? null : p.id)
-                              }
-                              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100"
-                              title="Actions"
+                              onClick={() => openForm(p, { mode: 'edit' })}
+                              className="shrink-0 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
                             >
-                              <svg
-                                className="h-5 w-5"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                              </svg>
+                              Fill Form
                             </button>
-                            {openMenu === p.id && (
-                              <div className="absolute right-0 mt-1 w-32 bg-white border border-slate-200 rounded-lg shadow-lg z-10">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    openForm(p, { mode: "view" });
-                                    setOpenMenu(null);
-                                  }}
-                                  className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 first:rounded-t-lg"
-                                >
-                                  View
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    openForm(p, { mode: "edit" });
-                                    setOpenMenu(null);
-                                  }}
-                                  className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 last:rounded-b-lg"
-                                >
-                                  Edit
-                                </button>
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => openForm(p, { mode: "edit" })}
-                            className="rounded-lg px-3 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700"
-                          >
-                            Fill Form
-                          </button>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    )
+                  })}
+                </div>
 
-              {/* Desktop table */}
-              <div className="hidden overflow-x-auto md:block">
-                <table className="w-full min-w-[700px] border-collapse text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50/80">
-                      <th className="px-4 py-3 font-semibold text-slate-700">
-                        Name of Sewadar/Sewadarni
-                      </th>
-                      <th className="px-4 py-3 font-semibold text-slate-700">
-                        Address
-                      </th>
-                      <th className="px-4 py-3 font-semibold text-slate-700">
-                        Phone Number
-                      </th>
-                      <th className="px-4 py-3 font-semibold text-slate-700">
-                        Badge ID
-                      </th>
-                      <th className="px-4 py-3 font-semibold text-slate-700">
-                        Blood Group
-                      </th>
-                      <th className="px-4 py-3 font-semibold text-slate-700">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {baseFiltered.map((p) => {
-                      const existingLog = userCallLogsByProspect[p.id];
-                      const hasLog = !!existingLog;
-                      return (
-                        <tr
-                          key={p.id}
-                          className="border-b border-slate-100 hover:bg-slate-50/50"
-                        >
-                          <td className="px-4 py-3 font-medium text-slate-900">
-                            {p.name || "-"}
-                          </td>
-                          <td className="px-4 py-3 text-slate-600">
-                            {p.address || "-"}
-                          </td>
-                          <td className="px-4 py-3 text-slate-600">
-                            {p.phoneNumber || "-"}
-                          </td>
-                          <td className="px-4 py-3 text-slate-600">
-                            {p.badgeId || "-"}
-                          </td>
-                          <td className="px-4 py-3 text-slate-600">
-                            {p.bloodGroup || "-"}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="relative inline-block">
+                {/* Desktop table */}
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="w-full min-w-[700px] border-collapse text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50/80">
+                        <th className="px-4 py-3 font-semibold text-slate-700">Name of Sewadar/Sewadarni</th>
+                        <th className="px-4 py-3 font-semibold text-slate-700">Address</th>
+                        <th className="px-4 py-3 font-semibold text-slate-700">Phone Number</th>
+                        <th className="px-4 py-3 font-semibold text-slate-700">Badge ID</th>
+                        <th className="px-4 py-3 font-semibold text-slate-700">Blood Group</th>
+                        <th className="px-4 py-3 font-semibold text-slate-700">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {baseFiltered.map((p) => {
+                        const existingLog = userCallLogsByProspect[p.id]
+                        const hasLog = !!existingLog
+                        return (
+                          <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50/50">
+                            <td className="px-4 py-3 font-medium text-slate-900">{p.name || '-'}</td>
+                            <td className="px-4 py-3 text-slate-600">{p.address || '-'}</td>
+                            <td className="px-4 py-3 text-slate-600">{p.phoneNumber || '-'}</td>
+                            <td className="px-4 py-3 text-slate-600">{p.badgeId || '-'}</td>
+                            <td className="px-4 py-3 text-slate-600">{p.bloodGroup || '-'}</td>
+                            <td className="px-4 py-3 space-x-2">
                               {hasLog ? (
                                 <>
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      setOpenMenu(
-                                        openMenu === p.id ? null : p.id,
-                                      )
-                                    }
-                                    className="rounded-lg p-2 text-slate-600 hover:bg-slate-100"
-                                    title="Actions"
+                                    onClick={() => openForm(p, { mode: 'view' })}
+                                    className="rounded-lg bg-slate-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
                                   >
-                                    <svg
-                                      className="h-5 w-5"
-                                      fill="currentColor"
-                                      viewBox="0 0 20 20"
-                                    >
-                                      <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                                    </svg>
+                                    View
                                   </button>
-                                  {openMenu === p.id && (
-                                    <div className="absolute right-0 mt-1 w-32 bg-white border border-slate-200 rounded-lg shadow-lg z-10">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          openForm(p, { mode: "view" });
-                                          setOpenMenu(null);
-                                        }}
-                                        className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 first:rounded-t-lg"
-                                      >
-                                        View
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          openForm(p, { mode: "edit" });
-                                          setOpenMenu(null);
-                                        }}
-                                        className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 last:rounded-b-lg"
-                                      >
-                                        Edit
-                                      </button>
-                                    </div>
-                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => openForm(p, { mode: 'edit' })}
+                                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700"
+                                  >
+                                    Edit
+                                  </button>
                                 </>
                               ) : (
                                 <button
                                   type="button"
-                                  onClick={() => openForm(p, { mode: "edit" })}
-                                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700"
+                                  onClick={() => openForm(p, { mode: 'edit' })}
+                                  className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
                                 >
                                   Fill Form
                                 </button>
                               )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      </div>
 
       {/* Call Form Modal - matches image layout */}
       {formOpen && selectedProspect && (
@@ -715,291 +428,75 @@ function UserDashboard() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-4">
-              <button
-                type="button"
-                onClick={closeForm}
-                className="text-sm font-medium text-slate-600 hover:text-slate-900"
-              >
+              <button type="button" onClick={closeForm} className="text-sm font-medium text-slate-600 hover:text-slate-900">
                 ← Back
               </button>
-              <h2
-                id="call-form-title"
-                className="text-lg font-semibold text-slate-900"
-              >
-                {viewOnly ? "View" : editingCallLogId ? "Edit" : "New"} –{" "}
-                {selectedProspect?.name}
+              <h2 id="call-form-title" className="text-lg font-semibold text-slate-900">
+                Prospect Details – {selectedProspect.name}
               </h2>
               <span className="w-14" />
             </div>
 
-            <form
-              onSubmit={handleSubmit}
-              className="flex-1 overflow-y-auto bg-sky-100/80 p-4 sm:p-6"
-            >
-              {/* Personal Information */}
-              <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
-                Personal Information
-              </p>
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto bg-sky-100/80 p-4 sm:p-6">
+              {/* Read-only prospect info (top section from image) */}
               <div className="mb-4 grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-4">
                 <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Full Name
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "fullName", "name") ||
-                      selectedProspect.name ||
-                      "-"}
-                  </p>
+                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">Mobile</label>
+                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">{getAttr(doc, 'mobile', 'Mobile') || selectedProspect.phoneNumber || '-'}</p>
                 </div>
                 <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Phone Number
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "mobile", "Mobile") ||
-                      selectedProspect.phoneNumber ||
-                      "-"}
-                  </p>
+                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">Date of Birth</label>
+                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">{getAttr(doc, 'dateOfBirth', 'dateOfBirth') || '-'}</p>
                 </div>
                 <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Gender
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "gender", "Gender") || "-"}
-                  </p>
+                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">Dept Finalised Name</label>
+                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">{getAttr(doc, 'DeptFinalisedName', 'DeptFinalisedName', 'departmentName') || '-'}</p>
                 </div>
                 <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Date of Birth
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "dateOfBirth", "dateOfBirth") || "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Age
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "age", "age") || "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Blood Group
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "bloodgroup", "bloodGroup") ||
-                      selectedProspect.bloodGroup ||
-                      "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Marital Status
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "maritalStatus", "maritalStatus") || "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Guardian Name
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "guardian", "guardian") || "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Father / Husband Name
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(
-                      doc,
-                      "fatherHusbandName",
-                      "fatherHusbandName",
-                      "fathersName",
-                      "husbandName",
-                    ) || "-"}
-                  </p>
+                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">Marital Status</label>
+                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">{getAttr(doc, 'maritalStatus', 'maritalStatus') || '-'}</p>
                 </div>
               </div>
-
-              {/* Address Information */}
-              <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
-                Address Information
-              </p>
-              <div className="mb-4 grid gap-3 rounded-lg border border-slate-200 bg-white p-4">
-                <div>
-                  <label className="mb-1 block text-xs font-medium uppercase text-slate-600">
-                    Residential Address
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "address", "Address") ||
-                      selectedProspect.address ||
-                      "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium uppercase text-slate-600">
-                    Permanent Address
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "permanentAddress", "permanentAddress") ||
-                      "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium uppercase text-slate-600">
-                    Locality/District
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "locality", "locality") || "-"}
-                  </p>
-                </div>
+              <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
+                <label className="mb-1 block text-xs font-semibold text-slate-700">R/O Village/Town/Locality/District</label>
+                <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">{getAttr(doc, 'locality', 'locality') || '-'}</p>
               </div>
-
-              {/* ID & Badge Information */}
-              <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
-                ID & Badge Information
-              </p>
-              <div className="mb-4 grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-4">
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Badge ID
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "badgeId", "badgeId") ||
-                      selectedProspect.badgeId ||
-                      "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Badge Status
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "badgeStatus", "badgeStatus") || "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Aadhar
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "aadhar", "aadhar") || "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Emergency Contact
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "emergencyContact", "emergencyContact") ||
-                      "-"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Department & Service Information */}
-              <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
-                Department & Service Information
-              </p>
-              <div className="mb-4 grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-4">
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Dept Finalised Name
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(
-                      doc,
-                      "DeptFinalisedName",
-                      "DeptFinalisedName",
-                      "departmentName",
-                    ) || "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Assigned To
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "assignedTo", "assignedTo") || "-"}
-                  </p>
-                </div>
+              <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
+                <label className="mb-2 block text-sm font-bold text-slate-900 underline">ADDRESS</label>
+                <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">{getAttr(doc, 'address', 'Address') || selectedProspect.address || '-'}</p>
               </div>
 
               {/* Namdaan Details - bold red header */}
-              <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
-                Namdaan Details
-              </p>
+              <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">Namdaan Details</p>
               <div className="mb-4 grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-4">
                 <div>
-                  <label className="mb-1 block text-[10px] font-medium text-slate-500">
-                    Doi
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(
-                      doc,
-                      "NamdaanDOI",
-                      "NamdaanDOI",
-                      "dateOfInitiation",
-                    ) || "-"}
-                  </p>
+                  <label className="mb-1 block text-[10px] font-medium text-slate-500">Doi</label>
+                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">{getAttr(doc, 'NamdaanDOI', 'NamdaanDOI', 'dateOfInitiation') || '-'}</p>
                 </div>
                 <div>
-                  <label className="mb-1 block text-[10px] font-medium text-slate-500">
-                    Is Initiated
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "namdaanInitiated", "namdaanInitiated") ||
-                      "-"}
-                  </p>
+                  <label className="mb-1 block text-[10px] font-medium text-slate-500">Is Initiated</label>
+                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">{getAttr(doc, 'namdaanInitiated', 'namdaanInitiated') || '-'}</p>
                 </div>
                 <div>
-                  <label className="mb-1 block text-[10px] font-medium text-slate-500">
-                    Initiation By
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(
-                      doc,
-                      "NamdaanInitiationBy",
-                      "NamdaanInitiationBy",
-                      "initiationBy",
-                    ) || "-"}
-                  </p>
+                  <label className="mb-1 block text-[10px] font-medium text-slate-500">Initiation By</label>
+                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">{getAttr(doc, 'NamdaanInitiationBy', 'NamdaanInitiationBy', 'initiationBy') || '-'}</p>
                 </div>
                 <div>
-                  <label className="mb-1 block text-[10px] font-medium text-slate-500">
-                    Initiation Place
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(
-                      doc,
-                      "NamdaanInitiationPlace",
-                      "NamdaanInitiationPlace",
-                      "initiationPlace",
-                    ) || "-"}
-                  </p>
+                  <label className="mb-1 block text-[10px] font-medium text-slate-500">Initiation Place</label>
+                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">{getAttr(doc, 'NamdaanInitiationPlace', 'NamdaanInitiationPlace', 'initiationPlace') || '-'}</p>
                 </div>
               </div>
 
               {/* Calling Data Select Option + Transfer Data - layout side by side */}
               <div className="mb-4 grid gap-3 md:grid-cols-2">
                 <div className="rounded-lg border border-slate-200 bg-white p-4">
-                  <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
-                    Calling Data Select Option
-                  </p>
+                  <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">Calling Data Select Option</p>
                   <div className="grid grid-cols-1 gap-3">
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-600">
-                        Select
-                      </label>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Select</label>
                       <select
                         value={form.select}
-                        onChange={updateForm("select")}
+                        onChange={updateForm('select')}
                         disabled={viewOnly}
                         className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm disabled:bg-slate-50"
                       >
@@ -1009,12 +506,10 @@ function UserDashboard() {
                       </select>
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-600">
-                        Call Back
-                      </label>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Call Back</label>
                       <select
                         value={form.callBack}
-                        onChange={updateForm("callBack")}
+                        onChange={updateForm('callBack')}
                         disabled={viewOnly}
                         className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm disabled:bg-slate-50"
                       >
@@ -1024,12 +519,10 @@ function UserDashboard() {
                       </select>
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-600">
-                        Not Interest
-                      </label>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Not Interest</label>
                       <select
                         value={form.notInterest}
-                        onChange={updateForm("notInterest")}
+                        onChange={updateForm('notInterest')}
                         disabled={viewOnly}
                         className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm disabled:bg-slate-50"
                       >
@@ -1037,21 +530,28 @@ function UserDashboard() {
                         <option value="Yes">Yes</option>
                         <option value="No">No</option>
                       </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Department of Sewa (optional)</label>
+                      <input
+                        type="text"
+                        value={form.departmentOfSewa}
+                        onChange={updateForm('departmentOfSewa')}
+                        disabled={viewOnly}
+                        placeholder="e.g. Langar Seva, Main Kitchen"
+                        className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm disabled:bg-slate-50"
+                      />
                     </div>
                   </div>
                 </div>
                 <div className="rounded-lg border border-slate-200 bg-white p-4">
-                  <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
-                    Transfer Data
-                  </p>
+                  <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">Transfer Data</p>
                   <div className="grid grid-cols-1 gap-3">
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-600">
-                        Nominal List Select
-                      </label>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Nominal List Select</label>
                       <select
                         value={form.nominalListSelect}
-                        onChange={updateForm("nominalListSelect")}
+                        onChange={updateForm('nominalListSelect')}
                         disabled={viewOnly}
                         className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm disabled:bg-slate-50"
                       >
@@ -1061,12 +561,10 @@ function UserDashboard() {
                       </select>
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-600">
-                        Visit Select
-                      </label>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Visit Select</label>
                       <select
                         value={form.visitSelect}
-                        onChange={updateForm("visitSelect")}
+                        onChange={updateForm('visitSelect')}
                         disabled={viewOnly}
                         className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm disabled:bg-slate-50"
                       >
@@ -1076,12 +574,10 @@ function UserDashboard() {
                       </select>
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-600">
-                        Free Sewa
-                      </label>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Free Sewa</label>
                       <select
                         value={form.freeSewa}
-                        onChange={updateForm("freeSewa")}
+                        onChange={updateForm('freeSewa')}
                         disabled={viewOnly}
                         className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm disabled:bg-slate-50"
                       >
@@ -1090,184 +586,85 @@ function UserDashboard() {
                         <option value="No">No</option>
                       </select>
                     </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Attendance</label>
+                      <select
+                        value={form.attendance}
+                        onChange={updateForm('attendance')}
+                        disabled={viewOnly}
+                        className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm disabled:bg-slate-50"
+                      >
+                        <option value="">Select</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Jatha Record</label>
+                      <select
+                        value={form.jathaRecord}
+                        onChange={updateForm('jathaRecord')}
+                        disabled={viewOnly}
+                        className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm disabled:bg-slate-50"
+                      >
+                        <option value="">Select</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Need to Work notes */}
+              {/* Need to Work - single paragraph input */}
               <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
-                <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
-                  Need to Work
-                </p>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-600">
-                      Good participation
-                    </label>
-                    <textarea
-                      value={form.notes1}
-                      onChange={updateForm("notes1")}
-                      disabled={viewOnly}
-                      rows={2}
-                      className="w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm disabled:bg-slate-50"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-600">
-                      Positive
-                    </label>
-                    <textarea
-                      value={form.notes2}
-                      onChange={updateForm("notes2")}
-                      disabled={viewOnly}
-                      rows={2}
-                      className="w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm disabled:bg-slate-50"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-600">
-                      VIP prospect
-                    </label>
-                    <textarea
-                      value={form.notes3}
-                      onChange={updateForm("notes3")}
-                      disabled={viewOnly}
-                      rows={2}
-                      className="w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm disabled:bg-slate-50"
-                    />
-                  </div>
-                </div>
+                <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">Need to Work</p>
+                <label className="mb-1 block text-xs font-medium text-slate-600">Need to Work</label>
+                <textarea
+                  value={form.needToWork}
+                  onChange={updateForm('needToWork')}
+                  disabled={viewOnly}
+                  rows={4}
+                  placeholder="Enter detailed notes about areas that need work..."
+                  className="w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm disabled:bg-slate-50"
+                />
               </div>
 
               {/* Jatha Details - bold red header */}
-              <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
-                Jatha Details
-              </p>
+              <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">Jatha Details</p>
               {!viewOnly && (
-                <button
-                  type="button"
-                  onClick={addJatha}
-                  className="mb-3 flex items-center gap-1.5 rounded-lg border border-sky-400 bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700 hover:bg-sky-100"
-                >
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  + Add Jatha
-                </button>
+              <button type="button" onClick={addJatha} className="mb-3 flex items-center gap-1.5 rounded-lg border border-sky-400 bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700 hover:bg-sky-100">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                + Add Jatha
+              </button>
               )}
               {form.jathaDetails.length > 0 && (
                 <div className="mb-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">
                   <table className="w-full min-w-[500px] border-collapse text-left text-sm">
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50">
-                        <th className="px-3 py-2 font-semibold text-slate-700">
-                          Area Name
-                        </th>
-                        <th className="px-3 py-2 font-semibold text-slate-700">
-                          Department name
-                        </th>
-                        <th className="px-3 py-2 font-semibold text-slate-700">
-                          Jatha total Day
-                        </th>
-                        <th className="px-3 py-2 font-semibold text-slate-700">
-                          Date From..To..
-                        </th>
+                        <th className="px-3 py-2 font-semibold text-slate-700">Area Name</th>
+                        <th className="px-3 py-2 font-semibold text-slate-700">Department name</th>
+                        <th className="px-3 py-2 font-semibold text-slate-700">Jatha total Day</th>
+                        <th className="px-3 py-2 font-semibold text-slate-700">Date From..To..</th>
                         <th className="w-10 px-2 py-2" />
                       </tr>
                     </thead>
                     <tbody>
                       {form.jathaDetails.map((j, i) => (
                         <tr key={i} className="border-b border-slate-100">
-                          <td className="px-3 py-2">
-                            <input
-                              type="text"
-                              value={j.areaName}
-                              onChange={(e) =>
-                                updateJatha(i, "areaName", e.target.value)
-                              }
-                              placeholder="e.g. North Hall"
-                              disabled={viewOnly}
-                              className="w-full rounded border border-slate-200 px-2 py-1 text-xs disabled:bg-slate-50"
-                            />
-                          </td>
-                          <td className="px-3 py-2">
-                            <input
-                              type="text"
-                              value={j.departmentName}
-                              onChange={(e) =>
-                                updateJatha(i, "departmentName", e.target.value)
-                              }
-                              placeholder="e.g. Langar Seva"
-                              disabled={viewOnly}
-                              className="w-full rounded border border-slate-200 px-2 py-1 text-xs disabled:bg-slate-50"
-                            />
-                          </td>
-                          <td className="px-3 py-2">
-                            <input
-                              type="text"
-                              value={j.jathaTotalDay}
-                              onChange={(e) =>
-                                updateJatha(i, "jathaTotalDay", e.target.value)
-                              }
-                              placeholder="Days"
-                              disabled={viewOnly}
-                              className="w-full rounded border border-slate-200 px-2 py-1 text-xs disabled:bg-slate-50"
-                            />
-                          </td>
+                          <td className="px-3 py-2"><input type="text" value={j.areaName} onChange={(e) => updateJatha(i, 'areaName', e.target.value)} placeholder="e.g. North Hall" disabled={viewOnly} className="w-full rounded border border-slate-200 px-2 py-1 text-xs disabled:bg-slate-50" /></td>
+                          <td className="px-3 py-2"><input type="text" value={j.departmentName} onChange={(e) => updateJatha(i, 'departmentName', e.target.value)} placeholder="e.g. Langar Seva" disabled={viewOnly} className="w-full rounded border border-slate-200 px-2 py-1 text-xs disabled:bg-slate-50" /></td>
+                          <td className="px-3 py-2"><input type="text" value={j.jathaTotalDay} onChange={(e) => updateJatha(i, 'jathaTotalDay', e.target.value)} placeholder="Days" disabled={viewOnly} className="w-full rounded border border-slate-200 px-2 py-1 text-xs disabled:bg-slate-50" /></td>
                           <td className="px-3 py-2">
                             <div className="flex gap-1">
-                              <input
-                                type="date"
-                                value={j.dateFrom}
-                                onChange={(e) =>
-                                  updateJatha(i, "dateFrom", e.target.value)
-                                }
-                                disabled={viewOnly}
-                                className="rounded border border-slate-200 px-2 py-1 text-xs disabled:bg-slate-50"
-                              />
-                              <input
-                                type="date"
-                                value={j.dateTo}
-                                onChange={(e) =>
-                                  updateJatha(i, "dateTo", e.target.value)
-                                }
-                                disabled={viewOnly}
-                                className="rounded border border-slate-200 px-2 py-1 text-xs disabled:bg-slate-50"
-                              />
+                              <input type="date" value={j.dateFrom} onChange={(e) => updateJatha(i, 'dateFrom', e.target.value)} disabled={viewOnly} className="rounded border border-slate-200 px-2 py-1 text-xs disabled:bg-slate-50" />
+                              <input type="date" value={j.dateTo} onChange={(e) => updateJatha(i, 'dateTo', e.target.value)} disabled={viewOnly} className="rounded border border-slate-200 px-2 py-1 text-xs disabled:bg-slate-50" />
                             </div>
                           </td>
                           <td className="px-2 py-2">
                             {!viewOnly && (
-                              <button
-                                type="button"
-                                onClick={() => removeJatha(i)}
-                                className="rounded p-1 text-red-500 hover:bg-red-50"
-                                aria-label="Remove"
-                              >
-                                <svg
-                                  className="h-5 w-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                  />
-                                </svg>
-                              </button>
+                            <button type="button" onClick={() => removeJatha(i)} className="rounded p-1 text-red-500 hover:bg-red-50" aria-label="Remove"><svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
                             )}
                           </td>
                         </tr>
@@ -1277,398 +674,22 @@ function UserDashboard() {
                 </div>
               )}
 
-              {error && (
-                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {error}
-                </div>
-              )}
-              {success && (
-                <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-                  {success}
-                </div>
-              )}
+              {error && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
+              {success && <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{success}</div>}
 
               {!viewOnly && (
                 <div className="flex justify-center pt-4">
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full max-w-xs rounded-lg bg-emerald-600 px-6 py-3 text-base font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
-                  >
-                    {submitting
-                      ? editingCallLogId
-                        ? "Updating…"
-                        : "Submitting…"
-                      : editingCallLogId
-                        ? "UPDATE"
-                        : "SUBMIT"}
+                  <button type="submit" disabled={submitting} className="w-full max-w-xs rounded-lg bg-emerald-600 px-6 py-3 text-base font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
+                    {submitting ? 'Submitting…' : 'SUBMIT'}
                   </button>
                 </div>
               )}
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Add Prospect Modal for users */}
-      {addModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-slate-900/50 p-0 sm:items-center sm:p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="add-prospect-title-user"
-          onClick={closeAddModal}
-        >
-          <div
-            className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-t-xl bg-white shadow-xl sm:rounded-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
-              <div>
-                <h2
-                  id="add-prospect-title-user"
-                  className="text-lg font-semibold text-slate-900"
-                >
-                  Add Prospect
-                </h2>
-                <p className="mt-0.5 text-sm text-slate-500">
-                  Quick add prospect (admin can edit/assign later)
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={closeAddModal}
-                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
-                aria-label="Close"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form
-              onSubmit={handleSubmitAddProspect}
-              className="flex-1 overflow-y-auto px-5 py-4"
-            >
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-red-600">
-                Badge Status
-              </p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs font-medium text-slate-700">
-                    Badge Status
-                  </label>
-                  <select
-                    value={addForm.badgeStatus}
-                    onChange={updateAddForm("badgeStatus")}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
-                  >
-                    <option value="N/A">N/A</option>
-                    <option value="Open">Open</option>
-                    <option value="Permanent">Permanent</option>
-                    <option value="Elderly">Elderly</option>
-                    <option value="Sangat">Sangat</option>
-                    <option value="New Prospects">New Prospects</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-red-600">
-                    Name of Sewadar/Sewadarni *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={addForm.name}
-                    onChange={updateAddForm("name")}
-                    placeholder="Full name"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
-                    Father's/Husband's Name
-                  </label>
-                  <input
-                    type="text"
-                    value={addForm.fathersName}
-                    onChange={updateAddForm("fathersName")}
-                    placeholder="Father's or Husband's name"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
-                    Badge ID
-                  </label>
-                  <input
-                    type="text"
-                    value={addForm.badgeId}
-                    onChange={updateAddForm("badgeId")}
-                    placeholder="Enter badge ID"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
-                    Mobile Number *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={addForm.mobileNumber}
-                    onChange={updateAddForm("mobileNumber")}
-                    placeholder="e.g., 9876543210"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
-                    Gender (M/F)
-                  </label>
-                  <div className="flex gap-4 pt-2">
-                    {["Male", "Female", "Other"].map((opt) => (
-                      <label
-                        key={opt}
-                        className="flex cursor-pointer items-center gap-2"
-                      >
-                        <input
-                          type="radio"
-                          name="gender"
-                          value={opt}
-                          checked={addForm.gender === opt}
-                          onChange={updateAddFormRadio("gender")}
-                          className="text-slate-700"
-                        />
-                        <span className="text-sm text-slate-600">{opt}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
-                    Age
-                  </label>
-                  <input
-                    type="text"
-                    value={addForm.age}
-                    readOnly
-                    placeholder="Age (auto-calculated)"
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
-                    Aadhar No
-                  </label>
-                  <input
-                    type="text"
-                    value={addForm.aadharNumber}
-                    onChange={updateAddForm("aadharNumber")}
-                    placeholder="12-digit Aadhar number"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
-                    Department Finalised Name
-                  </label>
-                  <input
-                    type="text"
-                    value={addForm.departmentName}
-                    onChange={updateAddForm("departmentName")}
-                    placeholder="Department name"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
-                    Date of Birth
-                  </label>
-                  <input
-                    type="date"
-                    value={addForm.dateOfBirth}
-                    onChange={({ target: { value } }) => {
-                      setAddForm((f) => ({
-                        ...f,
-                        dateOfBirth: value,
-                        age: calculateAgeFromDob(value),
-                      }));
-                    }}
-                    max={new Date().toISOString().slice(0, 10)}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
-                    Emergency Contact
-                  </label>
-                  <input
-                    type="text"
-                    value={addForm.emergencyContact}
-                    onChange={updateAddForm("emergencyContact")}
-                    placeholder="Emergency contact"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
-                    Blood Group
-                  </label>
-                  <input
-                    type="text"
-                    value={addForm.bloodgroup}
-                    onChange={updateAddForm("bloodgroup")}
-                    placeholder="e.g., A+, B-, O+, AB+"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
-                    Marital Status
-                  </label>
-                  <select
-                    value={addForm.maritalStatus}
-                    onChange={updateAddForm("maritalStatus")}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
-                  >
-                    <option value="N/A">N/A</option>
-                    <option value="Single">Single</option>
-                    <option value="Married">Married</option>
-                    <option value="Widowed">Widowed</option>
-                    <option value="Divorced">Divorced</option>
-                  </select>
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
-                    R/O Village/Town/Locality/District
-                  </label>
-                  <input
-                    type="text"
-                    value={addForm.locality}
-                    onChange={updateAddForm("locality")}
-                    placeholder="e.g., Model Town, Ludhiana"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-red-600">
-                    Address
-                  </p>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
-                    Residential Address
-                  </label>
-                  <textarea
-                    value={addForm.fullAddress}
-                    onChange={updateAddForm("fullAddress")}
-                    placeholder="Complete residential address"
-                    rows={3}
-                    className="w-full resize-y rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
-                    Permanent Address
-                  </label>
-                  <textarea
-                    value={addForm.permanentAddress}
-                    onChange={updateAddForm("permanentAddress")}
-                    placeholder="Permanent address (if different from residential)"
-                    rows={3}
-                    className="w-full resize-y rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Naam Dan Details */}
-              <p className="mb-3 mt-6 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Naam Dan Details
-              </p>
-              <div className="mb-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-slate-700">
-                      Has the prospect been initiated?
-                    </label>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Indicate if Naam Dan has been received.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={addForm.initiated}
-                    onClick={() =>
-                      setAddForm((f) => ({ ...f, initiated: !f.initiated }))
-                    }
-                    className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${addForm.initiated ? "bg-sky-600" : "bg-slate-200"}`}
-                  >
-                    <span
-                      className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${addForm.initiated ? "left-6" : "left-1"}`}
-                    />
-                  </button>
-                </div>
-                {addForm.initiated && (
-                  <div className="mt-4 grid gap-4 sm:grid-cols-3">
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-600">
-                        Date of Initiation (DOI)
-                      </label>
-                      <input
-                        type="date"
-                        value={addForm.dateOfInitiation}
-                        onChange={updateAddForm("dateOfInitiation")}
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-600">
-                        Initiation By
-                      </label>
-                      <input
-                        type="text"
-                        value={addForm.initiationBy}
-                        onChange={updateAddForm("initiationBy")}
-                        placeholder="Name of initiator"
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-600">
-                        Initiation Place
-                      </label>
-                      <input
-                        type="text"
-                        value={addForm.initiationPlace}
-                        onChange={updateAddForm("initiationPlace")}
-                        placeholder="Location of initiation"
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-4 flex justify-end gap-2 border-t border-slate-200 pt-4">
-                <button
-                  type="button"
-                  onClick={closeAddModal}
-                  className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={addSubmitting}
-                  className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-                >
-                  {addSubmitting ? "Adding…" : "Submit Prospect"}
-                </button>
-              </div>
             </form>
           </div>
         </div>
       )}
     </div>
-  );
+  )
 }
 
-export default UserDashboard;
+export default UserDashboard

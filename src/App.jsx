@@ -3,8 +3,14 @@ import LoginPage from './pages/LoginPage'
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import ProspectsDetailsPage from './pages/admin/ProspectsDetailsPage'
+import AdminNominalRollPage from './pages/admin/NominalRollPage'
+import VisitDataPage from './pages/admin/VisitDataPage'
+import JathaRecordPage from './pages/admin/JathaRecordPage'
 import UserLayout from './pages/UserLayout'
 import UserDashboard from './pages/UserDashboard'
+import UserNominalRollPage from './pages/NominalRollPage'
+import UserVisitDataPage from './pages/VisitDataPage'
+import UserJathaRecordPage from './pages/JathaRecordPage'
 import UnderConstruction from './pages/UnderConstruction'
 import ProtectedRoute from './routes/ProtectedRoute'
 
@@ -26,9 +32,9 @@ function App() {
           <Route index element={<AdminDashboard />} />
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="prospects-details" element={<ProspectsDetailsPage />} />
-          <Route path="nominal-roll" element={<UnderConstruction section="Nominal Roll" />} />
-          <Route path="jatha-record" element={<UnderConstruction section="Jatha Record" />} />
-          <Route path="visit-data" element={<UnderConstruction section="Visit Data" />} />
+          <Route path="nominal-roll" element={<AdminNominalRollPage />} />
+          <Route path="jatha-record" element={<JathaRecordPage />} />
+          <Route path="visit-data" element={<VisitDataPage />} />
           <Route path="add-prospects" element={<UnderConstruction section="Add Prospects" />} />
         </Route>
 
@@ -43,9 +49,9 @@ function App() {
         >
           <Route index element={<UserDashboard />} />
           <Route path="prospects-details" element={<UserDashboard />} />
-          <Route path="nominal-roll" element={<UnderConstruction section="Nominal Roll" />} />
-          <Route path="jatha-record" element={<UnderConstruction section="Jatha Record" />} />
-          <Route path="visit-data" element={<UnderConstruction section="Visit Data" />} />
+          <Route path="nominal-roll" element={<UserNominalRollPage />} />
+          <Route path="jatha-record" element={<UserJathaRecordPage />} />
+          <Route path="visit-data" element={<UserVisitDataPage />} />
         </Route>
 
         {/* Default redirect */}

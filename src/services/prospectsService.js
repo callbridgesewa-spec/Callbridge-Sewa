@@ -138,6 +138,15 @@ function toDbProspect(p) {
       ? `${p.locality}, ${p.fullAddress}`
       : p.fullAddress || p.locality || "");
   const fullName = String(p.fullName ?? p.name ?? "").trim() || "";
+  const guardian =
+    String(
+      p.guardian ??
+        p.fatherHusbandName ??
+        p.fathersName ??
+        p.husbandName ??
+        p.spouse ??
+        "",
+    ).trim() || "";
   return {
     fullName,
     address: String(address ?? "").trim() || "",
@@ -147,12 +156,8 @@ function toDbProspect(p) {
     aadhar: String(p.aadhar ?? p.aadharNumber ?? "").trim() || "",
     dateOfBirth: String(p.dateOfBirth ?? "").trim() || "",
     age: String(p.age ?? "").trim() || "",
-    guardian: String(p.guardian ?? p.fathersName ?? "").trim() || "",
-    fatherHusbandName:
-      String(
-        p.fatherHusbandName ?? p.fathersName ?? p.husbandName ?? p.spouse ?? "",
-      ).trim() || "",
-    badgeId: String(p.badgeId ?? p.batchNumber ?? "").trim() || "",
+    guardian,
+    batchNumber: String(p.badgeId ?? p.batchNumber ?? "").trim() || "",
     gender: String(p.gender ?? "Male").trim() || "Male",
     badgeStatus: String(p.badgeStatus ?? "N/A").trim() || "N/A",
     emergencyContact: String(p.emergencyContact ?? "").trim() || "",
