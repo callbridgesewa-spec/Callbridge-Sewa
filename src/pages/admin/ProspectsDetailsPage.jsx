@@ -16,6 +16,8 @@ import {
   listCallLogs,
   listCallLogsForProspect,
   updateCallLog,
+  deleteCallLogsForProspect,
+  deleteCallLogsForProspects,
 } from "../../services/callLogsService";
 import { jsPDF } from "jspdf";
 import { ActionMenu } from "../../components/ActionMenu";
@@ -528,9 +530,14 @@ function ProspectsDetailsPage() {
     setError("");
     try {
       if (deleteConfirm.type === "single") {
+        // remove prospect itself first, then clean up any call logs
         await deleteProspect(deleteConfirm.id);
+        await deleteCallLogsForProspect(deleteConfirm.id);
       } else {
-        await deleteProspectsBulk([...selectedIds]);
+        const ids = [...selectedIds];
+        await deleteProspectsBulk(ids);
+        // make sure associated logs vanish as well
+        await deleteCallLogsForProspects(ids);
         setSelectedIds(new Set());
       }
       await loadProspects();
@@ -2759,7 +2766,6 @@ function ProspectsDetailsPage() {
                         </td>
                         <td className="px-4 py-3">
                           <ActionMenu
-                            prospectId={p.id}
                             onView={
                               prospectsWithCallLog.has(p.id)
                                 ? () => openCallLogForProspect(p)

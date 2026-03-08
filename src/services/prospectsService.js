@@ -229,6 +229,8 @@ export async function unassignProspects(prospectIds) {
   }
 }
 
+export { getAttr, getAttrByKeyMatch };
+
 export async function deleteProspect(documentId) {
   const { databaseId, prospectsCollectionId } = APPWRITE_CONFIG;
   if (!databaseId || !prospectsCollectionId) {

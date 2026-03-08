@@ -58,7 +58,8 @@ export function useJathaData(isAdmin = false) {
       const prospectDocs = prospectRes.documents || [];
       const prospectById = {};
       prospectDocs.forEach((d) => {
-        prospectById[d.$id] = docToDisplay(d);
+        // keep the raw document along with the normalized display object
+        prospectById[d.$id] = { ...docToDisplay(d), raw: d };
       });
 
       const logs = callLogsRes.documents || [];
@@ -75,6 +76,7 @@ export function useJathaData(isAdmin = false) {
             badgeId: "-",
             assignedTo: "-",
             bloodGroup: "-",
+            raw: null,
           };
           return { prospect, log };
         });

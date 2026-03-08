@@ -11,6 +11,7 @@ import {
   deleteCallLog,
 } from "../services/callLogsService";
 import { ActionMenu } from "../components/ActionMenu";
+import { ProspectInfo } from "../components/ProspectInfo";
 import { jsPDF } from "jspdf";
 
 const SEARCH_BY_OPTIONS = [
@@ -20,16 +21,6 @@ const SEARCH_BY_OPTIONS = [
   "Badge ID",
   "Blood Group",
 ];
-
-function getAttr(doc, ...keys) {
-  if (!doc || typeof doc !== "object") return "";
-  for (const k of keys) {
-    const v = doc[k];
-    if (v !== undefined && v !== null && String(v).trim() !== "")
-      return String(v).trim();
-  }
-  return "";
-}
 
 const INITIAL_FORM = {
   select: "",
@@ -741,7 +732,6 @@ function UserDashboard() {
                           </td>
                           <td className="px-4 py-3">
                             <ActionMenu
-                              prospectId={p.id}
                               onView={
                                 hasLog
                                   ? () => openForm(p, { mode: "view" })
@@ -832,198 +822,8 @@ function UserDashboard() {
               onSubmit={handleSubmit}
               className="flex-1 overflow-y-auto bg-sky-100/80 p-4 sm:p-6"
             >
-              {/* Prospect Info - All Details */}
-              <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
-                Prospect Information
-              </p>
-              <div className="mb-4 grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-4">
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Name
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {selectedProspect.name || "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Badge ID
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {selectedProspect.badgeId ||
-                      getAttr(doc, "batchNumber") ||
-                      "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Badge Status
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "badgeStatus") || "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Mobile
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "mobile", "Mobile") ||
-                      selectedProspect.phoneNumber ||
-                      "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Blood Group
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "bloodgroup", "bloodGroup") || "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Gender
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "gender") || "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Date of Birth
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "dateOfBirth") || "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Age
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "age") || "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Guardian/Father Name
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "guardian", "fatherHusbandName") || "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Aadhaar
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "aadhar") || "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Emergency Contact
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "emergencyContact") || "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                    Dept Finalised Name
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "DeptFinalisedName", "departmentName") || "-"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Address Section */}
-              <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
-                <label className="mb-2 block text-sm font-bold text-slate-900 uppercase tracking-wide">
-                  Residential Address
-                </label>
-                <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                  {getAttr(doc, "address", "Address") ||
-                    selectedProspect.address ||
-                    "-"}
-                </p>
-              </div>
-              <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
-                <label className="mb-2 block text-sm font-bold text-slate-900 uppercase tracking-wide">
-                  Permanent Address
-                </label>
-                <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                  {getAttr(doc, "permanentAddress") || "-"}
-                </p>
-              </div>
-              <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
-                <label className="mb-2 block text-sm font-bold text-slate-900 uppercase tracking-wide">
-                  R/O Village/Town/Locality/District
-                </label>
-                <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                  {getAttr(doc, "locality") || "-"}
-                </p>
-              </div>
-              <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
-                <label className="mb-2 block text-sm font-bold text-slate-900 uppercase tracking-wide">
-                  Marital Status
-                </label>
-                <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                  {getAttr(doc, "maritalStatus") || "-"}
-                </p>
-              </div>
-
-              {/* Namdaan Details - bold red header */}
-              <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
-                Namdaan Details
-              </p>
-              <div className="mb-4 grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-4">
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium text-slate-500">
-                    DOI
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "NamdaanDOI") || "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium text-slate-500">
-                    Is Initiated
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(doc, "namdaanInitiated", "namdaanInitiated") ||
-                      "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium text-slate-500">
-                    Initiation By
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(
-                      doc,
-                      "NamdaanInitiationBy",
-                      "NamdaanInitiationBy",
-                      "initiationBy",
-                    ) || "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] font-medium text-slate-500">
-                    Initiation Place
-                  </label>
-                  <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                    {getAttr(
-                      doc,
-                      "NamdaanInitiationPlace",
-                      "NamdaanInitiationPlace",
-                      "initiationPlace",
-                    ) || "-"}
-                  </p>
-                </div>
-              </div>
+              {/* Prospect info section (shared component) */}
+              <ProspectInfo prospect={selectedProspect} doc={doc} />
 
               {/* Calling Data Select Option + Transfer Data - layout side by side */}
               <div className="mb-4 grid gap-3 md:grid-cols-2">

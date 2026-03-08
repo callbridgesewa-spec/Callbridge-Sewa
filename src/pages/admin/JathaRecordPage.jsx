@@ -1,5 +1,6 @@
 import { useJathaData } from "../../hooks/useJathaData";
 import { ActionMenu } from "../../components/ActionMenu";
+import { ProspectInfo } from "../../components/ProspectInfo";
 
 function JathaRecordPage() {
   const {
@@ -109,7 +110,6 @@ function JathaRecordPage() {
                       </p>
                     </div>
                     <ActionMenu
-                      prospectId={log.$id}
                       onView={() => setViewEntry(entry)}
                       onEdit={() => openEdit(entry)}
                       onDelete={() => setDeleteEntry(entry)}
@@ -193,7 +193,6 @@ function JathaRecordPage() {
                         </td>
                         <td className="px-4 py-3">
                           <ActionMenu
-                            prospectId={log.$id}
                             onView={() => setViewEntry(entry)}
                             onEdit={() => openEdit(entry)}
                             onDelete={() => setDeleteEntry(entry)}
@@ -246,6 +245,10 @@ function JathaRecordPage() {
               </button>
             </div>
             <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4 text-sm">
+              <ProspectInfo
+                prospect={viewEntry.prospect}
+                doc={viewEntry.prospect.raw}
+              />
               <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                 <p className="font-semibold text-slate-900">
                   {viewEntry.prospect.name || "-"}
@@ -389,6 +392,10 @@ function JathaRecordPage() {
               }}
               className="flex-1 space-y-4 overflow-y-auto px-5 py-4 text-sm"
             >
+              <ProspectInfo
+                prospect={editEntry.prospect}
+                doc={editEntry.prospect.raw}
+              />
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-600">

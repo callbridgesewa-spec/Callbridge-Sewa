@@ -58,7 +58,7 @@ export function useNominalRollData(isAdmin = false) {
       const prospectDocs = prospectRes.documents || [];
       const prospectById = {};
       prospectDocs.forEach((d) => {
-        prospectById[d.$id] = docToDisplay(d);
+        prospectById[d.$id] = { ...docToDisplay(d), raw: d };
       });
 
       const logs = callLogsRes.documents || [];
@@ -76,6 +76,7 @@ export function useNominalRollData(isAdmin = false) {
             badgeId: "-",
             assignedTo: "-",
             bloodGroup: "-",
+            raw: null,
           };
           return { prospect, log };
         });
@@ -93,6 +94,7 @@ export function useNominalRollData(isAdmin = false) {
             badgeId: "-",
             assignedTo: "-",
             bloodGroup: "-",
+            raw: null,
           };
           list.push({ prospect, log });
         });

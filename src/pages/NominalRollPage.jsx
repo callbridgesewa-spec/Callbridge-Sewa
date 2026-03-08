@@ -1,5 +1,6 @@
 import { useNominalRollData } from "../hooks/useNominalRollData";
 import { ActionMenu } from "../components/ActionMenu";
+import { ProspectInfo } from "../components/ProspectInfo";
 
 function NominalRollPage() {
   const { loading, error, entries, viewEntry, setViewEntry } =
@@ -86,7 +87,6 @@ function NominalRollPage() {
                     </td>
                     <td className="px-4 py-3">
                       <ActionMenu
-                        prospectId={prospect.id || log.$id}
                         onView={() => setViewEntry({ prospect, log })}
                         showEditForm={false}
                         showDeleteProspect={false}
@@ -99,6 +99,135 @@ function NominalRollPage() {
           </div>
         )}
       </div>
+
+      {viewEntry && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setViewEntry(null)}
+        >
+          <div
+            className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+              <h2 className="text-base font-semibold text-slate-900">
+                Calling Form – {viewEntry.prospect.name || "-"}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setViewEntry(null)}
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4 text-sm">
+              <ProspectInfo
+                prospect={viewEntry.prospect}
+                doc={viewEntry.prospect.raw}
+              />
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-red-600">
+                    Calling Data
+                  </p>
+                  <p>
+                    <span className="text-xs text-slate-500">Select: </span>
+                    <span className="font-medium">
+                      {viewEntry.log.select || "-"}
+                    </span>
+                  </p>
+                  <p>
+                    <span className="text-xs text-slate-500">Call Back: </span>
+                    <span className="font-medium">
+                      {viewEntry.log.callBack || "-"}
+                    </span>
+                  </p>
+                  <p>
+                    <span className="text-xs text-slate-500">
+                      Not Interest:
+                    </span>
+                    <span className="font-medium">
+                      {viewEntry.log.notInterest || "-"}
+                    </span>
+                  </p>
+                  <p>
+                    <span className="text-xs text-slate-500">
+                      Department of Sewa:
+                    </span>
+                    <span className="font-medium">
+                      {viewEntry.log.departmentOfSewa || "-"}
+                    </span>
+                  </p>
+                </div>
+                <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-red-600">
+                    Transfer Data
+                  </p>
+                  <p>
+                    <span className="text-xs text-slate-500">
+                      Nominal List Select:
+                    </span>
+                    <span className="font-medium">
+                      {viewEntry.log.nominalListSelect || "-"}
+                    </span>
+                  </p>
+                  <p>
+                    <span className="text-xs text-slate-500">
+                      Visit Select:
+                    </span>
+                    <span className="font-medium">
+                      {viewEntry.log.visitSelect || "-"}
+                    </span>
+                  </p>
+                  <p>
+                    <span className="text-xs text-slate-500">Free Sewa: </span>
+                    <span className="font-medium">
+                      {viewEntry.log.freeSewa || "-"}
+                    </span>
+                  </p>
+                  <p>
+                    <span className="text-xs text-slate-500">Attendance: </span>
+                    <span className="font-medium">
+                      {viewEntry.log.attendance || "-"}
+                    </span>
+                  </p>
+                  <p>
+                    <span className="text-xs text-slate-500">
+                      Jatha Record:
+                    </span>
+                    <span className="font-medium">
+                      {viewEntry.log.jathaRecord || "-"}
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-red-600">
+                  Need to Work
+                </p>
+                <p className="mt-1 whitespace-pre-line text-sm text-slate-700">
+                  {viewEntry.log.needToWork || "-"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useNominalRollData } from "../../hooks/useNominalRollData";
 import { ActionMenu } from "../../components/ActionMenu";
+import { ProspectInfo } from "../../components/ProspectInfo";
 
 function NominalRollPage() {
   const {
@@ -107,7 +108,6 @@ function NominalRollPage() {
                       </p>
                     </div>
                     <ActionMenu
-                      prospectId={log.$id}
                       onView={() => setViewEntry(entry)}
                       onEdit={() => openEdit(entry)}
                       onDelete={() => setDeleteEntry(entry)}
@@ -179,7 +179,6 @@ function NominalRollPage() {
                         </td>
                         <td className="px-4 py-3">
                           <ActionMenu
-                            prospectId={log.$id}
                             onView={() => setViewEntry(entry)}
                             onEdit={() => openEdit(entry)}
                             onDelete={() => setDeleteEntry(entry)}
@@ -233,18 +232,10 @@ function NominalRollPage() {
               </button>
             </div>
             <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4 text-sm">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                <p className="font-semibold text-slate-900">
-                  {viewEntry.prospect.name || "-"}
-                </p>
-                <p className="mt-0.5 text-xs text-slate-600">
-                  {viewEntry.prospect.address || "-"}
-                </p>
-                <p className="mt-0.5 text-xs text-slate-600">
-                  Badge: {viewEntry.prospect.badgeId || "-"} · Phone:{" "}
-                  {viewEntry.prospect.phoneNumber || "-"}
-                </p>
-              </div>
+              <ProspectInfo
+                prospect={viewEntry.prospect}
+                doc={viewEntry.prospect.raw}
+              />
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3">
                   <p className="text-xs font-semibold uppercase tracking-wider text-red-600">
@@ -377,6 +368,10 @@ function NominalRollPage() {
               }}
               className="flex-1 space-y-4 overflow-y-auto px-5 py-4 text-sm"
             >
+              <ProspectInfo
+                prospect={editEntry.prospect}
+                doc={editEntry.prospect.raw}
+              />
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-600">
