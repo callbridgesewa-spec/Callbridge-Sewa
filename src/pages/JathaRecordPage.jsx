@@ -2,6 +2,16 @@ import { useJathaData } from "../hooks/useJathaData";
 import { ActionMenu } from "../components/ActionMenu";
 import { ProspectInfo } from "../components/ProspectInfo";
 
+function toTelHref(phone) {
+  const raw = String(phone || "").trim();
+  if (!raw || raw === "-") return "";
+  const normalized = raw.replace(/[^\d+]/g, "");
+  const cleaned = normalized.startsWith("+")
+    ? `+${normalized.slice(1).replace(/\+/g, "")}`
+    : normalized.replace(/\+/g, "");
+  return cleaned ? `tel:${cleaned}` : "";
+}
+
 function JathaRecordPage() {
   const {
     loading,
@@ -114,7 +124,16 @@ function JathaRecordPage() {
                       {prospect.badgeId || "-"}
                     </td>
                     <td className="px-4 py-3 text-slate-600">
-                      {prospect.phoneNumber || "-"}
+                      {toTelHref(prospect.phoneNumber) ? (
+                        <a
+                          href={toTelHref(prospect.phoneNumber)}
+                          className="text-slate-700 hover:underline"
+                        >
+                          {prospect.phoneNumber}
+                        </a>
+                      ) : (
+                        prospect.phoneNumber || "-"
+                      )}
                     </td>
                     <td className="px-4 py-3 text-slate-600">
                       {log.nominalListSelect || "-"}

@@ -2,6 +2,16 @@ import { useVisitDataPage } from "../../hooks/useVisitDataPage";
 import { ActionMenu } from "../../components/ActionMenu";
 import { ProspectInfo } from "../../components/ProspectInfo";
 
+function toTelHref(phone) {
+  const raw = String(phone || "").trim();
+  if (!raw || raw === "-") return "";
+  const normalized = raw.replace(/[^\d+]/g, "");
+  const cleaned = normalized.startsWith("+")
+    ? `+${normalized.slice(1).replace(/\+/g, "")}`
+    : normalized.replace(/\+/g, "");
+  return cleaned ? `tel:${cleaned}` : "";
+}
+
 function VisitDataPage() {
   const {
     loading,
@@ -100,7 +110,16 @@ function VisitDataPage() {
                         {prospect.address || "-"}
                       </p>
                       <p className="mt-0.5 text-xs text-slate-600">
-                        {prospect.phoneNumber || "-"}
+                        {toTelHref(prospect.phoneNumber) ? (
+                          <a
+                            href={toTelHref(prospect.phoneNumber)}
+                            className="text-slate-700 hover:underline"
+                          >
+                            {prospect.phoneNumber}
+                          </a>
+                        ) : (
+                          prospect.phoneNumber || "-"
+                        )}
                       </p>
                       <p className="mt-0.5 text-[11px] text-slate-500">
                         Submitted by {log.submittedBy || "-"}
@@ -163,7 +182,16 @@ function VisitDataPage() {
                           {prospect.badgeId || "-"}
                         </td>
                         <td className="px-4 py-3 text-slate-600">
-                          {prospect.phoneNumber || "-"}
+                          {toTelHref(prospect.phoneNumber) ? (
+                            <a
+                              href={toTelHref(prospect.phoneNumber)}
+                              className="text-slate-700 hover:underline"
+                            >
+                              {prospect.phoneNumber}
+                            </a>
+                          ) : (
+                            prospect.phoneNumber || "-"
+                          )}
                         </td>
                         <td className="px-4 py-3 text-slate-600 max-w-[200px] truncate">
                           {prospect.address || "-"}
@@ -243,7 +271,16 @@ function VisitDataPage() {
                 </p>
                 <p className="mt-0.5 text-xs text-slate-600">
                   Badge: {viewEntry.prospect.badgeId || "-"} · Phone:{" "}
-                  {viewEntry.prospect.phoneNumber || "-"}
+                  {toTelHref(viewEntry.prospect.phoneNumber) ? (
+                    <a
+                      href={toTelHref(viewEntry.prospect.phoneNumber)}
+                      className="text-slate-700 hover:underline"
+                    >
+                      {viewEntry.prospect.phoneNumber}
+                    </a>
+                  ) : (
+                    viewEntry.prospect.phoneNumber || "-"
+                  )}
                 </p>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
