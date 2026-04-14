@@ -93,6 +93,34 @@ export async function listProspects() {
   }
 }
 
+/** Fetch every prospect document (paginated). Use for admin export where listDocuments default limit would truncate. */
+export async function listAllProspects() {
+  const { databaseId, prospectsCollectionId } = APPWRITE_CONFIG;
+  if (!databaseId || !prospectsCollectionId) {
+    return [];
+  }
+  const limit = 100;
+  const all = [];
+  let offset = 0;
+  try {
+    while (true) {
+      const response = await databases.listDocuments(
+        databaseId,
+        prospectsCollectionId,
+        [Query.limit(limit), Query.offset(offset)],
+      );
+      const batch = response.documents || [];
+      all.push(...batch);
+      if (batch.length < limit) break;
+      offset += limit;
+    }
+    return all;
+  } catch (error) {
+    console.error("Failed to list all prospects", error);
+    return all;
+  }
+}
+
 export async function getProspect(documentId) {
   const { databaseId, prospectsCollectionId } = APPWRITE_CONFIG;
   if (!databaseId || !prospectsCollectionId || !documentId) {

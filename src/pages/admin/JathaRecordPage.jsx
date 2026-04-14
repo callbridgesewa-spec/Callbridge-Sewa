@@ -6,7 +6,6 @@ function JathaRecordPage() {
   const {
     loading,
     error,
-    entries,
     searchQuery,
     setSearchQuery,
     viewEntry,
@@ -24,6 +23,17 @@ function JathaRecordPage() {
     handleConfirmDelete,
     EMPTY_FORM,
   } = useJathaData(true);
+
+  const parseJathaDetails = (raw) => {
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw !== "string" || !raw.trim()) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
 
   return (
     <div className="flex flex-col space-y-4 p-4">
@@ -249,76 +259,15 @@ function JathaRecordPage() {
                 prospect={viewEntry.prospect}
                 doc={viewEntry.prospect.raw}
               />
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                <p className="font-semibold text-slate-900">
-                  {viewEntry.prospect.name || "-"}
+              <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-red-600">
+                  Jatha Details
                 </p>
-                <p className="mt-0.5 text-xs text-slate-600">
-                  {viewEntry.prospect.address || "-"}
-                </p>
-                <p className="mt-0.5 text-xs text-slate-600">
-                  Badge: {viewEntry.prospect.badgeId || "-"} · Phone:{" "}
-                  {viewEntry.prospect.phoneNumber || "-"}
-                </p>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-red-600">
-                    Calling Data
-                  </p>
+                <div className="grid gap-3 sm:grid-cols-2">
                   <p>
-                    <span className="text-xs text-slate-500">Select: </span>
+                    <span className="text-xs text-slate-500">Jatha Record: </span>
                     <span className="font-medium">
-                      {viewEntry.log.select || "-"}
-                    </span>
-                  </p>
-                  <p>
-                    <span className="text-xs text-slate-500">Call Back: </span>
-                    <span className="font-medium">
-                      {viewEntry.log.callBack || "-"}
-                    </span>
-                  </p>
-                  <p>
-                    <span className="text-xs text-slate-500">
-                      Not Interest:{" "}
-                    </span>
-                    <span className="font-medium">
-                      {viewEntry.log.notInterest || "-"}
-                    </span>
-                  </p>
-                  <p>
-                    <span className="text-xs text-slate-500">
-                      Department of Sewa:{" "}
-                    </span>
-                    <span className="font-medium">
-                      {viewEntry.log.departmentOfSewa || "-"}
-                    </span>
-                  </p>
-                </div>
-                <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-red-600">
-                    Transfer Data
-                  </p>
-                  <p>
-                    <span className="text-xs text-slate-500">
-                      Nominal List Select:{" "}
-                    </span>
-                    <span className="font-medium">
-                      {viewEntry.log.nominalListSelect || "-"}
-                    </span>
-                  </p>
-                  <p>
-                    <span className="text-xs text-slate-500">
-                      Visit Select:{" "}
-                    </span>
-                    <span className="font-medium">
-                      {viewEntry.log.visitSelect || "-"}
-                    </span>
-                  </p>
-                  <p>
-                    <span className="text-xs text-slate-500">Free Sewa: </span>
-                    <span className="font-medium">
-                      {viewEntry.log.freeSewa || "-"}
+                      {viewEntry.log.jathaRecord || "-"}
                     </span>
                   </p>
                   <p>
@@ -327,23 +276,60 @@ function JathaRecordPage() {
                       {viewEntry.log.attendance || "-"}
                     </span>
                   </p>
-                  <p>
-                    <span className="text-xs text-slate-500">
-                      Jatha Record:{" "}
-                    </span>
-                    <span className="font-medium">
-                      {viewEntry.log.jathaRecord || "-"}
-                    </span>
-                  </p>
                 </div>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-white p-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-red-600">
-                  Need to Work
-                </p>
-                <p className="mt-1 whitespace-pre-line text-sm text-slate-700">
-                  {viewEntry.log.needToWork || "-"}
-                </p>
+                {parseJathaDetails(viewEntry.log.jathaDetails).length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[540px] border-collapse text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50">
+                          <th className="px-2 py-2 font-semibold text-slate-700">
+                            Area Name
+                          </th>
+                          <th className="px-2 py-2 font-semibold text-slate-700">
+                            Department Name
+                          </th>
+                          <th className="px-2 py-2 font-semibold text-slate-700">
+                            Total Day
+                          </th>
+                          <th className="px-2 py-2 font-semibold text-slate-700">
+                            Date From
+                          </th>
+                          <th className="px-2 py-2 font-semibold text-slate-700">
+                            Date To
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {parseJathaDetails(viewEntry.log.jathaDetails).map(
+                          (row, i) => (
+                            <tr
+                              key={`${row.areaName || "jatha"}-${i}`}
+                              className="border-b border-slate-100"
+                            >
+                              <td className="px-2 py-2 text-slate-700">
+                                {row.areaName || "-"}
+                              </td>
+                              <td className="px-2 py-2 text-slate-700">
+                                {row.departmentName || "-"}
+                              </td>
+                              <td className="px-2 py-2 text-slate-700">
+                                {row.jathaTotalDay || "-"}
+                              </td>
+                              <td className="px-2 py-2 text-slate-700">
+                                {row.dateFrom || "-"}
+                              </td>
+                              <td className="px-2 py-2 text-slate-700">
+                                {row.dateTo || "-"}
+                              </td>
+                            </tr>
+                          ),
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">No jatha details added.</p>
+                )}
               </div>
             </div>
           </div>

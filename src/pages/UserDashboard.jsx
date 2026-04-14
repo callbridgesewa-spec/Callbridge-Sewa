@@ -47,6 +47,16 @@ const INITIAL_JATHA = {
   dateTo: "",
 };
 
+function toTelHref(phone) {
+  const raw = String(phone || "").trim();
+  if (!raw || raw === "-") return "";
+  const normalized = raw.replace(/[^\d+]/g, "");
+  const cleaned = normalized.startsWith("+")
+    ? `+${normalized.slice(1).replace(/\+/g, "")}`
+    : normalized.replace(/\+/g, "");
+  return cleaned ? `tel:${cleaned}` : "";
+}
+
 function UserDashboard() {
   const { user } = useAuth();
   const [prospects, setProspects] = useState([]);
@@ -624,7 +634,16 @@ function UserDashboard() {
                           {p.address || "-"}
                         </p>
                         <p className="mt-0.5 text-xs text-slate-600">
-                          {p.phoneNumber || "-"}
+                          {toTelHref(p.phoneNumber) ? (
+                            <a
+                              href={toTelHref(p.phoneNumber)}
+                              className="text-slate-700 hover:underline"
+                            >
+                              {p.phoneNumber}
+                            </a>
+                          ) : (
+                            p.phoneNumber || "-"
+                          )}
                         </p>
                         <p className="mt-0.5 text-[11px] text-slate-500">
                           ID:{p.badgeId || "-"} · {p.bloodGroup || "-"}
@@ -722,7 +741,16 @@ function UserDashboard() {
                             {p.address || "-"}
                           </td>
                           <td className="px-4 py-3 text-slate-600">
-                            {p.phoneNumber || "-"}
+                            {toTelHref(p.phoneNumber) ? (
+                              <a
+                                href={toTelHref(p.phoneNumber)}
+                                className="text-slate-700 hover:underline"
+                              >
+                                {p.phoneNumber}
+                              </a>
+                            ) : (
+                              p.phoneNumber || "-"
+                            )}
                           </td>
                           <td className="px-4 py-3 text-slate-600">
                             {p.badgeId || "-"}

@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import {
   uploadProspectExcel,
   listProspects,
+  listAllProspects,
   createProspect,
   createProspectsBulk,
   assignProspectsToUser,
@@ -14,6 +15,7 @@ import {
 import { listUsers } from "../../services/usersService";
 import {
   listCallLogs,
+  listAllCallLogs,
   listCallLogsForProspect,
   updateCallLog,
   deleteCallLogsForProspect,
@@ -290,6 +292,135 @@ const FULL_EXPORT_HEADERS = {
   NamdaanInitiationPlace: "Initiation Place",
 };
 
+/** Call form fields only (no Appwrite IDs, timestamps, or internal keys). */
+const CALL_LOG_HUMAN_FIELDS = [
+  ["prospectName", "Prospect name"],
+  ["submittedBy", "Submitted by"],
+  ["select", "Calling status"],
+  ["callBack", "Call back"],
+  ["notInterest", "Not interested"],
+  ["needToWork", "Need to work"],
+  ["departmentOfSewa", "Department of sewa"],
+  ["notes1", "Notes 1"],
+  ["notes2", "Notes 2"],
+  ["notes3", "Notes 3"],
+  ["nominalListSelect", "Nominal list"],
+  ["visitSelect", "Visit"],
+  ["freeSewa", "Free sewa"],
+  ["attendance", "Attendance"],
+  ["jathaRecord", "Jatha record"],
+  ["jathaDetails", "Jatha details"],
+];
+
+function excelCellValue(value) {
+  if (value === undefined || value === null) return "";
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+}
+
+function prospectHumanCell(doc, key) {
+  if (key === "badgeId") {
+    const v = doc.badgeId ?? doc.batchNumber;
+    return excelCellValue(v);
+  }
+  return excelCellValue(doc[key]);
+}
+
+function formatJathaDetailsHuman(raw) {
+  let parsed = raw;
+  if (typeof raw === "string" && raw.trim()) {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return excelCellValue(raw);
+    }
+  }
+  if (!Array.isArray(parsed) || !parsed.length) {
+    return typeof raw === "string" ? raw : excelCellValue(raw);
+  }
+  return parsed
+    .map((row, i) => {
+      const parts = Object.entries(row || {})
+        .filter(([, v]) => v != null && String(v).trim() !== "")
+        .map(([k, v]) => `${k}: ${v}`);
+      return parts.length ? `Entry ${i + 1}: ${parts.join("; ")}` : "";
+    })
+    .filter(Boolean)
+    .join(" | ");
+}
+
+function callLogHumanCell(log, key) {
+  const raw = log[key];
+  if (key === "jathaDetails") {
+    return formatJathaDetailsHuman(raw);
+  }
+  return excelCellValue(raw);
+}
+
+/** Most recently created call log per prospect (by Appwrite $createdAt). */
+function mapLatestLogByProspectId(callLogDocs) {
+  const latest = new Map();
+  for (const log of callLogDocs) {
+    const pid = String(log.prospectId || "").trim();
+    if (!pid) continue;
+    const prev = latest.get(pid);
+    if (
+      !prev ||
+      new Date(log.$createdAt || 0).getTime() >
+        new Date(prev.$createdAt || 0).getTime()
+    ) {
+      latest.set(pid, log);
+    }
+  }
+  return latest;
+}
+
+/**
+ * Admin export: human-readable columns only — prospect profile + latest call form,
+ * and a second sheet of all submitted forms (no Appwrite metadata).
+ */
+function exportAdminUnifiedWorkbook(prospectDocs, callLogDocs) {
+  const latestByProspect = mapLatestLogByProspectId(callLogDocs);
+
+  const prospectHeaders = FULL_EXPORT_COLUMNS.map(
+    (key) => FULL_EXPORT_HEADERS[key] || key,
+  );
+  const formKeys = CALL_LOG_HUMAN_FIELDS.map(([k]) => k);
+  const combinedHeaders = [
+    ...prospectHeaders,
+    ...CALL_LOG_HUMAN_FIELDS.map(([, label]) => `Calling form: ${label}`),
+  ];
+
+  const combinedRows = prospectDocs.map((doc) => {
+    const latest = latestByProspect.get(String(doc.$id || "").trim());
+    const prospectCells = FULL_EXPORT_COLUMNS.map((k) => prospectHumanCell(doc, k));
+    const formCells = formKeys.map((k) =>
+      latest ? callLogHumanCell(latest, k) : "",
+    );
+    return [...prospectCells, ...formCells];
+  });
+
+  const logHeaders = CALL_LOG_HUMAN_FIELDS.map(([, label]) => label);
+  const logRows = callLogDocs.map((log) =>
+    formKeys.map((k) => callLogHumanCell(log, k)),
+  );
+
+  const wb = XLSX.utils.book_new();
+  const wsCombined = XLSX.utils.aoa_to_sheet([combinedHeaders, ...combinedRows]);
+  XLSX.utils.book_append_sheet(wb, wsCombined, "Prospects and latest form");
+  const wsLogs = XLSX.utils.aoa_to_sheet([logHeaders, ...logRows]);
+  XLSX.utils.book_append_sheet(wb, wsLogs, "All call logs");
+  const stamp = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `callbridge_full_export_${stamp}.xlsx`);
+}
+
 function calculateAgeFromDob(dateStr) {
   if (!dateStr) return "";
   const dob = new Date(dateStr);
@@ -303,26 +434,14 @@ function calculateAgeFromDob(dateStr) {
   return age >= 0 ? String(age) : "";
 }
 
-function exportToExcelFull(documents) {
-  const headers = FULL_EXPORT_COLUMNS.map(
-    (key) => FULL_EXPORT_HEADERS[key] || key,
-  );
-  const rows = documents.map((doc) =>
-    FULL_EXPORT_COLUMNS.map((key) => {
-      const v = doc[key];
-      if (v === undefined || v === null) return "";
-      if (typeof v === "string") return v;
-      if (v instanceof Date) return v.toISOString();
-      return String(v);
-    }),
-  );
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Prospects");
-  XLSX.writeFile(
-    wb,
-    `prospects_full_${new Date().toISOString().slice(0, 10)}.xlsx`,
-  );
+function toTelHref(phone) {
+  const raw = String(phone || "").trim();
+  if (!raw || raw === "-") return "";
+  const normalized = raw.replace(/[^\d+]/g, "");
+  const cleaned = normalized.startsWith("+")
+    ? `+${normalized.slice(1).replace(/\+/g, "")}`
+    : normalized.replace(/\+/g, "");
+  return cleaned ? `tel:${cleaned}` : "";
 }
 
 const INITIAL_ADD_FORM = {
@@ -353,6 +472,7 @@ function ProspectsDetailsPage() {
   const [searchBy, setSearchBy] = useState("Name of Sewadar/Sewadarni");
   const [searchQuery, setSearchQuery] = useState("");
   const [importing, setImporting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [importedSignatures, setImportedSignatures] = useState(new Set());
@@ -656,16 +776,19 @@ function ProspectsDetailsPage() {
 
   const handleExportExcel = async () => {
     setError("");
+    setExporting(true);
     try {
-      const res = await listProspects();
-      const docs = res.documents || [];
-      if (docs.length === 0) {
+      const prospectDocs = await listAllProspects();
+      if (prospectDocs.length === 0) {
         setError("No prospects to export.");
         return;
       }
-      exportToExcelFull(docs);
+      const callLogDocs = await listAllCallLogs();
+      exportAdminUnifiedWorkbook(prospectDocs, callLogDocs);
     } catch (err) {
       setError(err.message || "Failed to export prospects.");
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -793,7 +916,8 @@ function ProspectsDetailsPage() {
             <button
               type="button"
               onClick={handleExportExcel}
-              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 sm:flex-initial sm:px-4 sm:text-sm"
+              disabled={exporting}
+              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60 sm:flex-initial sm:px-4 sm:text-sm"
             >
               <svg
                 className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4"
@@ -808,7 +932,7 @@ function ProspectsDetailsPage() {
                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                 />
               </svg>
-              Export Excel
+              {exporting ? "Exporting…" : "Export Excel"}
             </button>
           </div>
         </div>
@@ -2622,7 +2746,16 @@ function ProspectsDetailsPage() {
                             d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
                           />
                         </svg>
-                        {p.phoneNumber || "-"}
+                        {toTelHref(p.phoneNumber) ? (
+                          <a
+                            href={toTelHref(p.phoneNumber)}
+                            className="text-slate-700 hover:underline"
+                          >
+                            {p.phoneNumber}
+                          </a>
+                        ) : (
+                          p.phoneNumber || "-"
+                        )}
                       </p>
                       <div className="mt-1 flex flex-wrap gap-1.5 text-[11px] text-slate-500">
                         <span>ID:{p.badgeId || "-"}</span>
@@ -2752,7 +2885,16 @@ function ProspectsDetailsPage() {
                                 d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
                               />
                             </svg>
-                            {p.phoneNumber || "-"}
+                            {toTelHref(p.phoneNumber) ? (
+                              <a
+                                href={toTelHref(p.phoneNumber)}
+                                className="text-slate-700 hover:underline"
+                              >
+                                {p.phoneNumber}
+                              </a>
+                            ) : (
+                              p.phoneNumber || "-"
+                            )}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-slate-600">

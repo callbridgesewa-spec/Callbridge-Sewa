@@ -58,6 +58,38 @@ export async function listCallLogs() {
   }
 }
 
+/** Fetch every call log (paginated). Use for admin export. */
+export async function listAllCallLogs() {
+  const { databaseId, callLogsCollectionId } = APPWRITE_CONFIG;
+  if (!databaseId || !callLogsCollectionId) {
+    return [];
+  }
+  const limit = 100;
+  const all = [];
+  let offset = 0;
+  try {
+    while (true) {
+      const response = await databases.listDocuments(
+        databaseId,
+        callLogsCollectionId,
+        [
+          Query.orderDesc("$createdAt"),
+          Query.limit(limit),
+          Query.offset(offset),
+        ],
+      );
+      const batch = response.documents || [];
+      all.push(...batch);
+      if (batch.length < limit) break;
+      offset += limit;
+    }
+    return all;
+  } catch (error) {
+    console.error("Failed to list all call logs", error);
+    return all;
+  }
+}
+
 /** List call logs submitted by a specific user (for user dashboard) */
 export async function listCallLogsForUser(submittedBy) {
   const { databaseId, callLogsCollectionId } = APPWRITE_CONFIG;

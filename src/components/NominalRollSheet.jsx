@@ -193,6 +193,7 @@ function NominalRollSheet({ entries = [], title = "Nominal Roll Sewa Jatha" }) {
             <div className="border-b border-slate-800 py-1 text-center font-semibold">
               SATSANG CENTRES IN INDIA
             </div>
+            <div className="border-b border-slate-800 py-2" aria-hidden="true" />
             <div className="border-b border-slate-800 py-1 text-center font-semibold uppercase">
               {title}
             </div>

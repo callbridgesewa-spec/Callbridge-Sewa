@@ -3,17 +3,50 @@ import { ActionMenu } from "../components/ActionMenu";
 import { ProspectInfo } from "../components/ProspectInfo";
 
 function VisitDataPage() {
-  const { loading, error, entries, viewEntry, setViewEntry } =
-    useVisitDataPage(false);
+  const {
+    loading,
+    error,
+    searchQuery,
+    setSearchQuery,
+    viewEntry,
+    setViewEntry,
+    filteredEntries,
+  } = useVisitDataPage(false);
 
   return (
     <div className="flex flex-col space-y-4">
-      <header>
-        <h1 className="text-xl font-semibold text-slate-900">Visit Data</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Your assigned prospects marked &quot;Yes&quot; for Visit Select in
-          submitted calling forms
-        </p>
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-900">Visit Data</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Your assigned prospects marked &quot;Yes&quot; for Visit Select in
+            submitted calling forms
+          </p>
+        </div>
+        <div className="mt-2 sm:mt-0">
+          <div className="relative w-full sm:w-64">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, badge, phone…"
+              className="w-full rounded-lg border border-slate-200 py-2 pl-8 pr-3 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+            />
+            <svg
+              className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+        </div>
       </header>
 
       <div className="overflow-visible rounded-lg bg-white p-4 shadow-sm flex flex-col flex-1">
@@ -26,7 +59,7 @@ function VisitDataPage() {
           <div className="py-12 text-center text-sm text-slate-500">
             Loading visit data…
           </div>
-        ) : entries.length === 0 ? (
+        ) : filteredEntries.length === 0 ? (
           <div className="py-12 text-center">
             <p className="text-sm font-medium text-slate-600">
               No visit data yet
@@ -62,7 +95,7 @@ function VisitDataPage() {
                 </tr>
               </thead>
               <tbody>
-                {entries.map(({ prospect, log }, i) => (
+                {filteredEntries.map(({ prospect, log }, i) => (
                   <tr
                     key={prospect.id || i}
                     className="border-b border-slate-100 hover:bg-slate-50/50"
