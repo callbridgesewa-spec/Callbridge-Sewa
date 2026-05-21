@@ -8,9 +8,10 @@ import {
   createCallLog,
   updateCallLog,
   listCallLogsForUser,
-  deleteCallLog,
 } from "../services/callLogsService";
 import { ActionMenu } from "../components/ActionMenu";
+import { JathaAreaSelect } from "../components/JathaAreaSelect";
+import { JathaDepartmentSelect } from "../components/JathaDepartmentSelect";
 import { ProspectInfo } from "../components/ProspectInfo";
 import { jsPDF } from "jspdf";
 
@@ -74,21 +75,6 @@ function UserDashboard() {
   const [success, setSuccess] = useState("");
   const [userCallLogsByProspect, setUserCallLogsByProspect] = useState({});
   const [editingLogId, setEditingLogId] = useState(null);
-  const [deleteEntry, setDeleteEntry] = useState(null);
-
-  const handleConfirmDelete = async () => {
-    if (!deleteEntry) return;
-    setSubmitting(true);
-    try {
-      await deleteCallLog(deleteEntry.log.$id);
-      await loadAssigned();
-      setDeleteEntry(null);
-    } catch (err) {
-      setError(err.message || "Failed to delete form.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const loadAssigned = useCallback(async () => {
     const email = user?.email;
@@ -666,20 +652,6 @@ function UserDashboard() {
                             >
                               Edit Form
                             </button>
-                            <button
-                              type="button"
-                              disabled={!hasLog}
-                              onClick={() =>
-                                hasLog &&
-                                setDeleteEntry({
-                                  prospect: p,
-                                  log: existingLog,
-                                })
-                              }
-                              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-60"
-                            >
-                              Delete
-                            </button>
                           </>
                         ) : (
                           <button
@@ -766,21 +738,9 @@ function UserDashboard() {
                                   : undefined
                               }
                               onEdit={() => openForm(p, { mode: "edit" })}
-                              onDelete={
-                                hasLog
-                                  ? () =>
-                                      setDeleteEntry({
-                                        prospect: p,
-                                        log: existingLog,
-                                      })
-                                  : undefined
-                              }
                               showViewForm={hasLog}
                               showEditForm={true}
-                              showDeleteProspect={hasLog}
-                              isSaving={
-                                submitting && deleteEntry?.prospect?.id === p.id
-                              }
+                              showDeleteProspect={false}
                             />
                           </td>
                         </tr>
@@ -1120,27 +1080,21 @@ function UserDashboard() {
                       {form.jathaDetails.map((j, i) => (
                         <tr key={i} className="border-b border-slate-100">
                           <td className="px-3 py-2">
-                            <input
-                              type="text"
+                            <JathaAreaSelect
                               value={j.areaName}
                               onChange={(e) =>
                                 updateJatha(i, "areaName", e.target.value)
                               }
-                              placeholder="e.g. North Hall"
                               disabled={viewOnly}
-                              className="w-full rounded border border-slate-200 px-2 py-1 text-xs disabled:bg-slate-50"
                             />
                           </td>
                           <td className="px-3 py-2">
-                            <input
-                              type="text"
+                            <JathaDepartmentSelect
                               value={j.departmentName}
                               onChange={(e) =>
                                 updateJatha(i, "departmentName", e.target.value)
                               }
-                              placeholder="e.g. Langar Seva"
                               disabled={viewOnly}
-                              className="w-full rounded border border-slate-200 px-2 py-1 text-xs disabled:bg-slate-50"
                             />
                           </td>
                           <td className="px-3 py-2">
@@ -1235,67 +1189,6 @@ function UserDashboard() {
         </div>
       )}
 
-      {deleteEntry && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4"
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setDeleteEntry(null)}
-        >
-          <div
-            className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-              <h2 className="text-lg font-semibold text-slate-900">
-                Delete calling form?
-              </h2>
-              <button
-                onClick={() => setDeleteEntry(null)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto px-6 py-4">
-              <p className="text-sm text-slate-600">
-                Are you sure you want to delete the calling form for{" "}
-                <strong>{deleteEntry.prospect.name || "-"}</strong>?
-              </p>
-              <p className="mt-2 text-sm text-slate-500">
-                This action cannot be undone.
-              </p>
-            </div>
-            <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-6 py-4">
-              <button
-                onClick={() => setDeleteEntry(null)}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                disabled={submitting}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
-              >
-                {submitting ? "Deleting…" : "Delete"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

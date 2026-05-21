@@ -7,10 +7,8 @@ import AdminNominalRollPage from './pages/admin/NominalRollPage'
 import VisitDataPage from './pages/admin/VisitDataPage'
 import JathaRecordPage from './pages/admin/JathaRecordPage'
 import UserLayout from './pages/UserLayout'
+import Dashboard from './pages/Dashboard'
 import UserDashboard from './pages/UserDashboard'
-import UserNominalRollPage from './pages/NominalRollPage'
-import UserVisitDataPage from './pages/VisitDataPage'
-import UserJathaRecordPage from './pages/JathaRecordPage'
 import UnderConstruction from './pages/UnderConstruction'
 import ProtectedRoute from './routes/ProtectedRoute'
 
@@ -47,11 +45,9 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<UserDashboard />} />
+          <Route index element={<Navigate to="/user/dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard readOnly />} />
           <Route path="prospects-details" element={<UserDashboard />} />
-          <Route path="nominal-roll" element={<UserNominalRollPage />} />
-          <Route path="jatha-record" element={<UserJathaRecordPage />} />
-          <Route path="visit-data" element={<UserVisitDataPage />} />
         </Route>
 
         {/* Default redirect */}

@@ -259,7 +259,24 @@ export async function unassignProspects(prospectIds) {
 
 export { getAttr, getAttrByKeyMatch };
 
+const LOCAL_AUTH_KEY = "cb-local-auth";
+
+function assertCanDeleteProspect() {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = window.localStorage.getItem(LOCAL_AUTH_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (parsed?.role === "user") {
+      throw new Error("Employees cannot delete prospects.");
+    }
+  } catch (err) {
+    if (err?.message?.includes("Employees cannot delete")) throw err;
+  }
+}
+
 export async function deleteProspect(documentId) {
+  assertCanDeleteProspect();
   const { databaseId, prospectsCollectionId } = APPWRITE_CONFIG;
   if (!databaseId || !prospectsCollectionId) {
     throw new Error("Appwrite prospects collection is not configured.");

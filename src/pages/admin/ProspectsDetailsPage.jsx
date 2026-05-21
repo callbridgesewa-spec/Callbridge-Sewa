@@ -23,6 +23,8 @@ import {
 } from "../../services/callLogsService";
 import { jsPDF } from "jspdf";
 import { ActionMenu } from "../../components/ActionMenu";
+import { JathaAreaSelect } from "../../components/JathaAreaSelect";
+import { JathaDepartmentSelect } from "../../components/JathaDepartmentSelect";
 
 const SEARCH_BY_OPTIONS = [
   "Name of Sewadar/Sewadarni",
@@ -1354,8 +1356,7 @@ function ProspectsDetailsPage() {
                                 <label className="mb-1 block text-xs font-medium text-slate-600">
                                   Area Name
                                 </label>
-                                <input
-                                  type="text"
+                                <JathaAreaSelect
                                   value={j.areaName || ""}
                                   onChange={(e) =>
                                     updateJatha(
@@ -1371,8 +1372,7 @@ function ProspectsDetailsPage() {
                                 <label className="mb-1 block text-xs font-medium text-slate-600">
                                   Department Name
                                 </label>
-                                <input
-                                  type="text"
+                                <JathaDepartmentSelect
                                   value={j.departmentName || ""}
                                   onChange={(e) =>
                                     updateJatha(

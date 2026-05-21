@@ -18,7 +18,7 @@ function LoginPage() {
       if (role === 'admin') {
         navigate('/admin/dashboard', { replace: true })
       } else {
-        navigate('/user', { replace: true })
+        navigate('/user/dashboard', { replace: true })
       }
     } catch (err) {
       const message = err?.message || 'Failed to log in. Please check your credentials.'
