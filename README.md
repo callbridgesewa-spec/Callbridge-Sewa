@@ -55,12 +55,10 @@ Stores the dashboard badge counts.
 
 1. In the same database, click **Create Collection**.
 2. Name it (e.g. `badge-counts`) and note its **Collection ID**.
-3. Add attributes (all **integer** or **double**, required):
-   - `open`
-   - `permanent`
-   - `elderly`
-   - `sangat`
-   - `newProspects`
+3. Add attributes:
+   - Badge counts (integer or double, required): `open`, `permanent`, `elderly`, `sangat`, `newProspects`
+   - Jatha dropdown lists (string, optional): `Departments`, `area` — store JSON arrays, e.g. `["LANGAR","C-1"]` and `["Noida","Beas"]`. The app reads/writes these on the same badge-counts document used for the dashboard.
+   - `remarks` (string, optional) — dashboard remark shown to admins and employees.
 4. Permissions:
    - Allow **read & write** for admin users (same as users collection).
 

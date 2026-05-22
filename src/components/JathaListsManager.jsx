@@ -1,37 +1,67 @@
 import { useState } from 'react'
 import { useJathaLists } from '../context/JathaListsContext'
 
-function ListEditor({ title, description, items, onAdd, onRemove, onReset }) {
+function ListEditor({ title, description, items, onAdd, onRemove, onReset, disabled }) {
   const [input, setInput] = useState('')
   const [message, setMessage] = useState('')
+  const [busy, setBusy] = useState(false)
 
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault()
-    const result = onAdd(input)
-    if (result.added) {
-      setInput('')
-      setMessage('')
-    } else {
-      setMessage(result.error || 'Could not add.')
+    setBusy(true)
+    setMessage('')
+    try {
+      const result = await onAdd(input)
+      if (result.added) {
+        setInput('')
+        setMessage('')
+      } else {
+        setMessage(result.error || 'Could not add.')
+      }
+    } catch (err) {
+      setMessage(err?.message || 'Failed to save.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleRemove = async (name) => {
+    setBusy(true)
+    setMessage('')
+    try {
+      await onRemove(name)
+    } catch (err) {
+      setMessage(err?.message || 'Failed to save.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleReset = async () => {
+    if (!confirm(`Reset ${title.toLowerCase()} to the built-in default list?`)) return
+    setBusy(true)
+    setMessage('')
+    try {
+      await onReset()
+    } catch (err) {
+      setMessage(err?.message || 'Failed to save.')
+    } finally {
+      setBusy(false)
     }
   }
 
   return (
-    <div className="flex flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="flex flex-col rounded-xl border border-slate-200 bg-slate-50/50 p-4">
       <div className="mb-3 flex items-start justify-between gap-2">
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
+          <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
           <p className="mt-0.5 text-xs text-slate-500">{description}</p>
         </div>
         <button
           type="button"
-          onClick={() => {
-            if (confirm(`Reset ${title.toLowerCase()} to the built-in default list?`)) {
-              onReset()
-              setMessage('')
-            }
-          }}
-          className="shrink-0 text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline"
+          onClick={handleReset}
+          disabled={disabled || busy}
+          className="shrink-0 text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline disabled:opacity-50"
         >
           Reset defaults
         </button>
@@ -45,22 +75,22 @@ function ListEditor({ title, description, items, onAdd, onRemove, onReset }) {
             setInput(e.target.value)
             setMessage('')
           }}
+          disabled={disabled || busy}
           placeholder={`New ${title.toLowerCase().replace(/s$/, '')}…`}
-          className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+          className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 disabled:bg-slate-50"
         />
         <button
           type="submit"
-          className="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-900"
+          disabled={disabled || busy}
+          className="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-50"
         >
-          Add
+          {busy ? 'Saving…' : 'Add'}
         </button>
       </form>
 
-      {message && (
-        <p className="mb-2 text-xs text-red-600">{message}</p>
-      )}
+      {message && <p className="mb-2 text-xs text-red-600">{message}</p>}
 
-      <div className="max-h-52 overflow-y-auto rounded-lg border border-slate-100 bg-slate-50/50">
+      <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-100 bg-white">
         {items.length === 0 ? (
           <p className="px-3 py-4 text-center text-xs text-slate-500">No items yet.</p>
         ) : (
@@ -73,8 +103,9 @@ function ListEditor({ title, description, items, onAdd, onRemove, onReset }) {
                 <span className="min-w-0 truncate">{name}</span>
                 <button
                   type="button"
-                  onClick={() => onRemove(name)}
-                  className="shrink-0 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
+                  onClick={() => handleRemove(name)}
+                  disabled={disabled || busy}
+                  className="shrink-0 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-100 disabled:opacity-50"
                 >
                   Remove
                 </button>
@@ -88,10 +119,14 @@ function ListEditor({ title, description, items, onAdd, onRemove, onReset }) {
   )
 }
 
-export function JathaListsManager() {
+/** @param {{ embedded?: boolean }} props */
+export function JathaListsManager({ embedded = false }) {
   const {
     departments,
     areas,
+    loading,
+    saving,
+    error,
     addDepartment,
     removeDepartment,
     addArea,
@@ -100,33 +135,48 @@ export function JathaListsManager() {
     resetAreas,
   } = useJathaLists()
 
+  const disabled = loading || saving
+
   return (
-    <section className="space-y-3">
-      <div>
-        <h2 className="text-sm font-semibold text-slate-900">Jatha area & department lists</h2>
-        <p className="mt-1 text-xs text-slate-500">
-          Options used in call forms (Jatha Details). Saved in this browser—no database. Same device
-          and browser tabs stay in sync.
-        </p>
-      </div>
-      <div className="grid gap-4 lg:grid-cols-2">
+    <div className={embedded ? 'space-y-3' : 'space-y-3'}>
+      {!embedded && (
+        <div>
+          <h2 className="text-sm font-semibold text-slate-900">Jatha area & department lists</h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Stored in badge-counts (<code className="text-[10px]">area</code>,{' '}
+            <code className="text-[10px]">Departments</code>).
+          </p>
+        </div>
+      )}
+
+      {loading && <p className="text-sm text-slate-500">Loading lists…</p>}
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+      {saving && !loading && <p className="text-xs text-slate-500">Saving…</p>}
+
+      <div className="grid gap-4 sm:grid-cols-2">
         <ListEditor
           title="Areas"
-          description="Area name dropdown options"
+          description="badge-counts → area"
           items={areas}
           onAdd={addArea}
           onRemove={removeArea}
           onReset={resetAreas}
+          disabled={disabled}
         />
         <ListEditor
           title="Departments"
-          description="Department name dropdown options"
+          description="badge-counts → Departments"
           items={departments}
           onAdd={addDepartment}
           onRemove={removeDepartment}
           onReset={resetDepartments}
+          disabled={disabled}
         />
       </div>
-    </section>
+    </div>
   )
 }

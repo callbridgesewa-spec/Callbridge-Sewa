@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
-import { JathaListsManager } from '../components/JathaListsManager'
-import { fetchBadgeCounts, saveBadgeCounts } from '../services/badgesService'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { JathaListsModal } from '../components/JathaListsModal'
+import { fetchBadgeCounts, saveBadgeCounts, saveRemarks } from '../services/badgesService'
 import { createUser, listUsers, deleteUser } from '../services/usersService'
 
 const BADGE_SERIES = [
@@ -123,11 +123,6 @@ function Dashboard({ readOnly = false, setDashboardActions = null }) {
     [displayCounts],
   )
 
-  useEffect(() => {
-    loadCounts()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   const [badgeModalOpen, setBadgeModalOpen] = useState(false)
   const [userModalOpen, setUserModalOpen] = useState(false)
   const [users, setUsers] = useState([])
@@ -139,6 +134,12 @@ function Dashboard({ readOnly = false, setDashboardActions = null }) {
   const [userSuccess, setUserSuccess] = useState('')
   const [existingUsersModalOpen, setExistingUsersModalOpen] = useState(false)
   const [attendanceModalOpen, setAttendanceModalOpen] = useState(false)
+  const [jathaListsModalOpen, setJathaListsModalOpen] = useState(false)
+  const [remarks, setRemarks] = useState('')
+  const [remarkDraft, setRemarkDraft] = useState('')
+  const [remarkSaving, setRemarkSaving] = useState(false)
+  const [remarkError, setRemarkError] = useState('')
+  const [remarkSuccess, setRemarkSuccess] = useState('')
 
   function openBadgeModal() {
     setDraft(counts)
@@ -164,6 +165,10 @@ function Dashboard({ readOnly = false, setDashboardActions = null }) {
     setAttendanceModalOpen(true)
   }
 
+  function openJathaListsModal() {
+    setJathaListsModalOpen(true)
+  }
+
   async function openExistingUsersModal() {
     setExistingUsersModalOpen(true)
     setUserError('')
@@ -178,25 +183,76 @@ function Dashboard({ readOnly = false, setDashboardActions = null }) {
       openUserModal,
       openExistingUsersModal,
       openAttendanceModal,
+      openJathaListsModal,
     })
     return () => setDashboardActions(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readOnly, setDashboardActions, counts])
 
-  async function loadCounts() {
+  const loadCounts = useCallback(async () => {
     setLoading(true)
     setError('')
     setSuccess('')
+    setRemarkError('')
     try {
       const result = await fetchBadgeCounts()
       setCounts(result.counts)
       setDraft(result.counts)
       setSource(result.source)
+      const loadedRemarks = result.remarks ?? ''
+      setRemarks(loadedRemarks)
+      setRemarkDraft(loadedRemarks)
     } catch (err) {
       console.error(err)
       setError('Unable to load badge counts right now.')
     } finally {
       setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadCounts()
+  }, [loadCounts])
+
+  useEffect(() => {
+    function onRemarksUpdated(e) {
+      const text = e.detail?.remarks ?? ''
+      setRemarks(text)
+      if (readOnly) setRemarkDraft(text)
+    }
+    window.addEventListener('cb-remarks-updated', onRemarksUpdated)
+    return () => window.removeEventListener('cb-remarks-updated', onRemarksUpdated)
+  }, [readOnly])
+
+  async function handleSaveRemark() {
+    setRemarkSaving(true)
+    setRemarkError('')
+    setRemarkSuccess('')
+    try {
+      await saveRemarks(remarkDraft)
+      setRemarks(remarkDraft.trim())
+      setRemarkSuccess('Remark saved.')
+    } catch (err) {
+      setRemarkError(err?.message || 'Failed to save remark.')
+    } finally {
+      setRemarkSaving(false)
+    }
+  }
+
+  async function handleResetRemark() {
+    if (!confirm('Clear the dashboard remark for all users?')) return
+    setRemarkSaving(true)
+    setRemarkError('')
+    setRemarkSuccess('')
+    try {
+      await saveRemarks('')
+      setRemarks('')
+      setRemarkDraft('')
+      setRemarkSuccess('Remark cleared.')
+    } catch (err) {
+      setRemarkError(err?.message || 'Failed to clear remark.')
+    } finally {
+      setRemarkSaving(false)
     }
   }
 
@@ -289,17 +345,20 @@ function Dashboard({ readOnly = false, setDashboardActions = null }) {
         </div>
       )}
 
-      <section className="grid gap-4 lg:grid-cols-3">
-        <div className="rounded-xl bg-white p-5 shadow-sm lg:col-span-2">
+      <section className="grid gap-4 lg:grid-cols-2 lg:grid-rows-2 lg:items-stretch">
+        {/* Top left */}
+        <div className="rounded-xl bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-slate-900">Badge Overview</h2>
           <BadgeBarChart counts={displayCounts} />
         </div>
 
+        {/* Top right */}
         <div className="rounded-xl bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-slate-900">Badge Distribution</h2>
           <BadgePieChart counts={displayCounts} />
         </div>
 
+        {/* Bottom left */}
         <div className="rounded-xl bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between">
             <h2 className="text-sm font-semibold text-slate-900">Total Badges</h2>
@@ -313,9 +372,65 @@ function Dashboard({ readOnly = false, setDashboardActions = null }) {
             <p className="mt-2 text-[10px] text-amber-600">Using default values until saved to database.</p>
           )}
         </div>
+
+        {/* Bottom right */}
+        <div className="flex min-h-[10rem] flex-col rounded-xl bg-white p-5 shadow-sm">
+          <h2 className="shrink-0 text-sm font-semibold text-slate-900">Remarks</h2>
+          {readOnly ? (
+            <div className="mt-3 flex flex-1 flex-col overflow-hidden">
+              {loading ? (
+                <p className="text-sm text-slate-500">Loading…</p>
+              ) : remarks ? (
+                <p className="flex-1 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
+                  {remarks}
+                </p>
+              ) : (
+                <p className="text-sm italic text-slate-400">No remark posted yet.</p>
+              )}
+            </div>
+          ) : (
+            <>
+              <textarea
+                value={remarkDraft}
+                onChange={(e) => {
+                  setRemarkDraft(e.target.value)
+                  setRemarkError('')
+                  setRemarkSuccess('')
+                }}
+                placeholder="Add a remark for employees…"
+                rows={4}
+                className="mt-3 min-h-[5rem] flex-1 resize-y rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+              />
+              {remarkError && (
+                <p className="mt-2 text-xs text-red-600">{remarkError}</p>
+              )}
+              {remarkSuccess && (
+                <p className="mt-2 text-xs text-emerald-600">{remarkSuccess}</p>
+              )}
+              <div className="mt-3 flex shrink-0 flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleSaveRemark}
+                  disabled={remarkSaving || loading}
+                  className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-medium text-white hover:bg-slate-900 disabled:opacity-50"
+                >
+                  {remarkSaving ? 'Saving…' : 'Save remark'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetRemark}
+                  disabled={remarkSaving || loading}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Reset
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </section>
 
-      {!readOnly && <JathaListsManager />}
+      <JathaListsModal open={jathaListsModalOpen} onClose={() => setJathaListsModalOpen(false)} />
 
       {!readOnly && badgeModalOpen && (
         <div

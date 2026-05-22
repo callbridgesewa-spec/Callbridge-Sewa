@@ -73,6 +73,13 @@ function AdminLayout() {
                     >
                       Attendance
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => { dashboardActions.openJathaListsModal(); setActionsMenuOpen(false) }}
+                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                    >
+                      Jatha Lists
+                    </button>
                     <div className="my-1 border-t border-slate-100" />
                   </>
                 )}
@@ -120,6 +127,13 @@ function AdminLayout() {
               className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
             >
               Attendance
+            </button>
+            <button
+              type="button"
+              onClick={dashboardActions.openJathaListsModal}
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+            >
+              Jatha Lists
             </button>
           </>
         )}

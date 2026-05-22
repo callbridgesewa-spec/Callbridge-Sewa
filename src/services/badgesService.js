@@ -1,4 +1,11 @@
 import { databases, APPWRITE_CONFIG } from './appwriteClient'
+import {
+  DEFAULT_AREAS,
+  DEFAULT_DEPARTMENTS,
+  dedupeSorted,
+  parseListField,
+  serializeListForDb,
+} from '../utils/jathaListUtils'
 
 const DEFAULT_BADGES = {
   open: 40,
@@ -8,10 +15,33 @@ const DEFAULT_BADGES = {
   newProspects: 18,
 }
 
+/** Appwrite attribute keys on badge-counts collection */
+const ATTR_DEPARTMENTS = 'Departments'
+const ATTR_AREA = 'area'
+const ATTR_REMARKS = 'remarks'
+
+function parseRemark(doc) {
+  if (!doc) return ''
+  for (const key of [ATTR_REMARKS, 'Remarks', 'remark']) {
+    const raw = doc[key]
+    if (raw !== undefined && raw !== null && String(raw).trim()) {
+      return String(raw).trim()
+    }
+  }
+  return ''
+}
+
+function dispatchRemarksUpdated(remarks) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('cb-remarks-updated', { detail: { remarks } }),
+    )
+  }
+}
+
 async function getBadgeDocument() {
   const { databaseId, badgeCountsCollectionId } = APPWRITE_CONFIG
   if (!databaseId || !badgeCountsCollectionId) {
-    // No DB configured, caller will fall back to defaults
     return null
   }
 
@@ -25,7 +55,7 @@ async function getBadgeDocument() {
 export async function fetchBadgeCounts() {
   try {
     const doc = await getBadgeDocument()
-    if (!doc) return { counts: DEFAULT_BADGES, source: 'default' }
+    if (!doc) return { counts: DEFAULT_BADGES, remarks: '', source: 'default' }
 
     const counts = {
       open: Number(doc.open ?? DEFAULT_BADGES.open),
@@ -35,11 +65,43 @@ export async function fetchBadgeCounts() {
       newProspects: Number(doc.newProspects ?? DEFAULT_BADGES.newProspects),
     }
 
-    return { counts, source: 'database', documentId: doc.$id }
+    return {
+      counts,
+      remarks: parseRemark(doc),
+      source: 'database',
+      documentId: doc.$id,
+    }
   } catch (error) {
     console.error('Failed to fetch badge counts', error)
-    return { counts: DEFAULT_BADGES, source: 'default' }
+    return { counts: DEFAULT_BADGES, remarks: '', source: 'default' }
   }
+}
+
+/** Save dashboard remark to badge-counts `remarks` attribute. */
+export async function saveRemarks(remarksText) {
+  const { databaseId, badgeCountsCollectionId } = APPWRITE_CONFIG
+  if (!databaseId || !badgeCountsCollectionId) {
+    throw new Error('Appwrite badge counts collection is not configured.')
+  }
+
+  const remarks = String(remarksText ?? '').trim()
+  const payload = { [ATTR_REMARKS]: remarks }
+  const doc = await getBadgeDocument()
+
+  if (doc) {
+    await databases.updateDocument(databaseId, badgeCountsCollectionId, doc.$id, payload)
+    dispatchRemarksUpdated(remarks)
+    return doc.$id
+  }
+
+  const created = await databases.createDocument(
+    databaseId,
+    badgeCountsCollectionId,
+    'badge-counts',
+    { ...DEFAULT_BADGES, ...payload },
+  )
+  dispatchRemarksUpdated(remarks)
+  return created.$id
 }
 
 export async function saveBadgeCounts(updatedCounts) {
@@ -64,3 +126,82 @@ export async function saveBadgeCounts(updatedCounts) {
   return created.$id
 }
 
+/** Load Jatha area & department lists from badge-counts document. */
+export async function fetchJathaLists() {
+  try {
+    const doc = await getBadgeDocument()
+    if (!doc) {
+      return {
+        departments: DEFAULT_DEPARTMENTS,
+        areas: DEFAULT_AREAS,
+        source: 'default',
+        documentId: null,
+      }
+    }
+
+    const departments =
+      parseListField(doc, [ATTR_DEPARTMENTS, 'departments', 'Departments']) ??
+      DEFAULT_DEPARTMENTS
+    const areas =
+      parseListField(doc, [ATTR_AREA, 'areas', 'Area', 'Areas']) ?? DEFAULT_AREAS
+
+    return {
+      departments,
+      areas,
+      source: 'database',
+      documentId: doc.$id,
+    }
+  } catch (error) {
+    console.error('Failed to fetch jatha lists from badge-counts', error)
+    return {
+      departments: DEFAULT_DEPARTMENTS,
+      areas: DEFAULT_AREAS,
+      source: 'default',
+      documentId: null,
+    }
+  }
+}
+
+/** Save Jatha lists to badge-counts `Departments` and `area` attributes (JSON strings). */
+export async function saveJathaLists(lists) {
+  const { databaseId, badgeCountsCollectionId } = APPWRITE_CONFIG
+  if (!databaseId || !badgeCountsCollectionId) {
+    throw new Error('Appwrite badge counts collection is not configured.')
+  }
+
+  const departments = dedupeSorted(lists.departments)
+  const areas = dedupeSorted(lists.areas)
+  const payload = {
+    [ATTR_DEPARTMENTS]: serializeListForDb(departments),
+    [ATTR_AREA]: serializeListForDb(areas),
+  }
+
+  const doc = await getBadgeDocument()
+
+  if (doc) {
+    await databases.updateDocument(databaseId, badgeCountsCollectionId, doc.$id, payload)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('cb-jatha-lists-updated', {
+          detail: { departments, areas },
+        }),
+      )
+    }
+    return doc.$id
+  }
+
+  const created = await databases.createDocument(
+    databaseId,
+    badgeCountsCollectionId,
+    'badge-counts',
+    { ...DEFAULT_BADGES, ...payload },
+  )
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('cb-jatha-lists-updated', {
+        detail: { departments, areas },
+      }),
+    )
+  }
+  return created.$id
+}
