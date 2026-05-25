@@ -328,7 +328,7 @@ function UserDashboard() {
     docPdf.roundedRect(marginX, y, maxWidth, 30, 3, 3, "F");
     docPdf.setFontSize(12);
     docPdf.setFont("helvetica", "bold");
-    docPdf.text("PROSPECT INFORMATION", marginX + 5, y + 8);
+    docPdf.text("SEWADAR INFORMATION", marginX + 5, y + 8);
     docPdf.setFont("helvetica", "normal");
     docPdf.setFontSize(10);
     docPdf.text(`Name: ${selectedProspect.name || "-"}`, marginX + 5, y + 15);
@@ -532,7 +532,7 @@ function UserDashboard() {
     <div className="flex flex-col">
       <header>
         <h1 className="text-base font-semibold text-slate-900 sm:text-xl">
-          Prospects Details
+          Sewadar Details
         </h1>
       </header>
 
@@ -596,7 +596,7 @@ function UserDashboard() {
                 No prospects assigned to you yet
               </p>
               <p className="mt-1 text-sm text-slate-500">
-                The admin will assign prospects from the Prospects Details page.
+                The admin will assign sewadars from the Sewadar Details page.
               </p>
             </div>
           ) : (
@@ -779,7 +779,7 @@ function UserDashboard() {
                 id="call-form-title"
                 className="text-lg font-semibold text-slate-900"
               >
-                Prospect Details – {selectedProspect.name}
+                Sewadar Details – {selectedProspect.name}
               </h2>
               {viewOnly && (
                 <button

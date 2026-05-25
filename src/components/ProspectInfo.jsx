@@ -17,7 +17,7 @@ export function ProspectInfo({ prospect = {}, doc = {} }) {
   return (
     <>
       <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
-        Prospect Information
+        Sewadar Information
       </p>
       <div className="mb-4 grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-4">
         <div>

@@ -15,7 +15,7 @@ function NominalRollPage() {
         </div>
       </header>
 
-      <div className="overflow-visible rounded-lg bg-white p-4 shadow-sm flex flex-col flex-1">
+      <div className="flex flex-1 flex-col overflow-visible rounded-xl border border-slate-200 bg-slate-50/50 p-4 sm:p-6">
         {error && (
           <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}

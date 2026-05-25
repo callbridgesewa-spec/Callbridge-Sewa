@@ -2,7 +2,7 @@ import AppLayout from '../components/AppLayout'
 
 const sidebarItems = [
   { label: 'Dashboard', to: '/user/dashboard', icon: 'grid' },
-  { label: 'Prospects Details', to: '/user/prospects-details', icon: 'people' },
+  { label: 'Sewadar Details', to: '/user/prospects-details', icon: 'people' },
 ]
 
 function UserLayout() {

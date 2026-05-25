@@ -4,7 +4,7 @@ import AppLayout from '../../components/AppLayout'
 
 const sidebarItems = [
   { label: 'Dashboard', to: '/admin/dashboard', icon: 'grid' },
-  { label: 'Prospects Details', to: '/admin/prospects-details', icon: 'people' },
+  { label: 'Sewadar Details', to: '/admin/prospects-details', icon: 'people' },
   { label: 'Nominal Roll', to: '/admin/nominal-roll', icon: 'checklist' },
   { label: 'Jatha Record', to: '/admin/jatha-record', icon: 'folder' },
   { label: 'Visit Data', to: '/admin/visit-data', icon: 'clipboard' },

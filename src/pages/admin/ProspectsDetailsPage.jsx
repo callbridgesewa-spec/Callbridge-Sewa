@@ -296,7 +296,7 @@ const FULL_EXPORT_HEADERS = {
 
 /** Call form fields only (no Appwrite IDs, timestamps, or internal keys). */
 const CALL_LOG_HUMAN_FIELDS = [
-  ["prospectName", "Prospect name"],
+  ["prospectName", "Sewadar name"],
   ["submittedBy", "Submitted by"],
   ["select", "Calling status"],
   ["callBack", "Call back"],
@@ -824,7 +824,7 @@ function ProspectsDetailsPage() {
     <div className="flex flex-col space-y-3 px-2 py-3 sm:space-y-5 sm:px-0 sm:py-0">
       <header>
         <h1 className="text-base font-semibold text-slate-900 sm:text-xl">
-          Prospects Details
+          Sewadar Details
         </h1>
       </header>
 
@@ -1649,7 +1649,7 @@ function ProspectsDetailsPage() {
                     id="add-prospect-title"
                     className="text-lg font-semibold text-slate-900"
                   >
-                    Add Prospect Details
+                    Add Sewadar Details
                   </h2>
                   <p className="mt-0.5 text-sm text-slate-500">
                     Fill in the details for the new prospect.
@@ -2055,7 +2055,7 @@ function ProspectsDetailsPage() {
               docPdf.roundedRect(marginX, y, maxWidth, 30, 3, 3, "F");
               docPdf.setFontSize(12);
               docPdf.setFont("helvetica", "bold");
-              docPdf.text("PROSPECT INFORMATION", marginX + 5, y + 8);
+              docPdf.text("SEWADAR INFORMATION", marginX + 5, y + 8);
               docPdf.setFont("helvetica", "normal");
               docPdf.setFontSize(10);
               docPdf.text(`Name: ${prospect.name || "-"}`, marginX + 5, y + 15);
@@ -2247,7 +2247,7 @@ function ProspectsDetailsPage() {
                       ← Back
                     </button>
                     <h2 className="text-lg font-semibold text-slate-900">
-                      Prospect Details – {prospect.name}
+                      Sewadar Details – {prospect.name}
                     </h2>
                     <span className="w-14" />
                   </div>
@@ -2255,7 +2255,7 @@ function ProspectsDetailsPage() {
                   <form className="flex-1 overflow-y-auto bg-sky-100/80 p-4 sm:p-6">
                     {/* Prospect Info - All Details */}
                     <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
-                      Prospect Information
+                      Sewadar Information
                     </p>
                     <div className="mb-4 grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-4">
                       <div>
