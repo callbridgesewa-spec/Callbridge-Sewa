@@ -246,7 +246,7 @@ function VisitDataPage() {
                     </span>
                   </p>
                   <p>
-                    <span className="text-xs text-slate-500">Free Sewa: </span>
+                    <span className="text-xs text-slate-500">Ferry Sewa: </span>
                     <span className="font-medium">
                       {viewEntry.log.freeSewa || "-"}
                     </span>

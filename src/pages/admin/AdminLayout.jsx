@@ -8,7 +8,6 @@ const sidebarItems = [
   { label: 'Nominal Roll', to: '/admin/nominal-roll', icon: 'checklist' },
   { label: 'Jatha Record', to: '/admin/jatha-record', icon: 'folder' },
   { label: 'Visit Data', to: '/admin/visit-data', icon: 'clipboard' },
-  { label: 'Add Prospects', to: '/admin/add-prospects', icon: 'person-plus' },
 ]
 
 function AdminLayout() {

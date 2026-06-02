@@ -13,7 +13,7 @@ import { ActionMenu } from "../components/ActionMenu";
 import { JathaAreaSelect } from "../components/JathaAreaSelect";
 import { JathaDepartmentSelect } from "../components/JathaDepartmentSelect";
 import { ProspectInfo } from "../components/ProspectInfo";
-import { jsPDF } from "jspdf";
+import { generateCallingFormPDF } from "../utils/callingFormPdf";
 
 const SEARCH_BY_OPTIONS = [
   "Name of Sewadar/Sewadarni",
@@ -291,239 +291,14 @@ function UserDashboard() {
   }
 
   const handleDownload = () => {
-    if (!selectedProspect || !form) return;
-
-    const docPdf = new jsPDF();
-    const pageWidth = docPdf.internal.pageSize.getWidth();
-    const pageHeight = docPdf.internal.pageSize.getHeight();
-    const marginX = 15;
-    const marginY = 15;
-    const maxWidth = pageWidth - marginX * 2;
-    let y = marginY;
-
-    // Helper to add a new page if needed
-    const checkNewPage = (requiredSpace = 10) => {
-      if (y + requiredSpace > pageHeight - marginY) {
-        docPdf.addPage();
-        y = marginY;
-        return true;
-      }
-      return false;
-    };
-
-    // Header with title
-    docPdf.setFillColor(220, 38, 38); // Red background
-    docPdf.rect(0, 0, pageWidth, 25, "F");
-    docPdf.setTextColor(255, 255, 255);
-    docPdf.setFontSize(18);
-    docPdf.setFont("helvetica", "bold");
-    docPdf.text("CALLING FORM", pageWidth / 2, 18, {
-      align: "center",
+    if (!selectedProspect) return;
+    generateCallingFormPDF({
+      prospect:    selectedProspect,
+      doc:         selectedDoc || {},
+      form,
+      submittedBy: user?.email || "",
+      fileName:    `call_form_${selectedProspect.badgeId || selectedProspect.id}.pdf`,
     });
-    docPdf.setTextColor(0, 0, 0);
-    y = 35;
-
-    // Prospect Information Box
-    docPdf.setFillColor(241, 245, 249); // Light slate
-    docPdf.roundedRect(marginX, y, maxWidth, 30, 3, 3, "F");
-    docPdf.setFontSize(12);
-    docPdf.setFont("helvetica", "bold");
-    docPdf.text("SEWADAR INFORMATION", marginX + 5, y + 8);
-    docPdf.setFont("helvetica", "normal");
-    docPdf.setFontSize(10);
-    docPdf.text(`Name: ${selectedProspect.name || "-"}`, marginX + 5, y + 15);
-    docPdf.text(
-      `Badge ID: ${selectedProspect.badgeId || "-"}`,
-      marginX + 5,
-      y + 21,
-    );
-    docPdf.text(
-      `Phone: ${selectedProspect.phoneNumber || "-"}`,
-      marginX + 100,
-      y + 15,
-    );
-    docPdf.text(
-      `Address: ${selectedProspect.address || "-"}`,
-      marginX + 100,
-      y + 21,
-    );
-    y += 35;
-
-    // Calling Data Select Option Section
-    checkNewPage(25);
-    docPdf.setFillColor(220, 38, 38);
-    docPdf.rect(marginX, y, maxWidth, 8, "F");
-    docPdf.setTextColor(255, 255, 255);
-    docPdf.setFontSize(11);
-    docPdf.setFont("helvetica", "bold");
-    docPdf.text("CALLING DATA SELECT OPTION", marginX + 5, y + 6);
-    docPdf.setTextColor(0, 0, 0);
-    y += 12;
-
-    const callingData = [
-      ["Select", form.select || "-"],
-      ["Call Back", form.callBack || "-"],
-      ["Not Interest", form.notInterest || "-"],
-      ["Department of Sewa", form.departmentOfSewa || "-"],
-    ];
-    callingData.forEach(([label, value]) => {
-      checkNewPage(8);
-      docPdf.setFontSize(10);
-      docPdf.setFont("helvetica", "normal");
-      docPdf.text(`${label}:`, marginX + 5, y);
-      docPdf.setFont("helvetica", "bold");
-      docPdf.text(value, marginX + 60, y);
-      y += 7;
-    });
-    y += 3;
-
-    // Transfer Data Section
-    checkNewPage(25);
-    docPdf.setFillColor(220, 38, 38);
-    docPdf.rect(marginX, y, maxWidth, 8, "F");
-    docPdf.setTextColor(255, 255, 255);
-    docPdf.setFontSize(11);
-    docPdf.setFont("helvetica", "bold");
-    docPdf.text("TRANSFER DATA", marginX + 5, y + 6);
-    docPdf.setTextColor(0, 0, 0);
-    y += 12;
-
-    const transferData = [
-      ["Nominal List Select", form.nominalListSelect || "-"],
-      ["Visit Select", form.visitSelect || "-"],
-      ["Free Sewa", form.freeSewa || "-"],
-      ["Attendance", form.attendance || "-"],
-      ["Jatha Record", form.jathaRecord || "-"],
-    ];
-    transferData.forEach(([label, value]) => {
-      checkNewPage(8);
-      docPdf.setFontSize(10);
-      docPdf.setFont("helvetica", "normal");
-      docPdf.text(`${label}:`, marginX + 5, y);
-      docPdf.setFont("helvetica", "bold");
-      docPdf.text(value, marginX + 60, y);
-      y += 7;
-    });
-    y += 3;
-
-    // Need to Work Section
-    checkNewPage(30);
-    docPdf.setFillColor(220, 38, 38);
-    docPdf.rect(marginX, y, maxWidth, 8, "F");
-    docPdf.setTextColor(255, 255, 255);
-    docPdf.setFontSize(11);
-    docPdf.setFont("helvetica", "bold");
-    docPdf.text("NEED TO WORK", marginX + 5, y + 6);
-    docPdf.setTextColor(0, 0, 0);
-    y += 12;
-
-    checkNewPage(15);
-    docPdf.setFontSize(10);
-    docPdf.setFont("helvetica", "normal");
-    docPdf.text("Need to Work:", marginX + 5, y);
-    const needToWorkChunks = docPdf.splitTextToSize(
-      form.needToWork || "-",
-      maxWidth - 50,
-    );
-    needToWorkChunks.forEach((chunk) => {
-      docPdf.text(chunk, marginX + 5, y);
-      y += 5;
-    });
-    y += 3;
-
-    // Notes Section
-    if (form.notes1 || form.notes2 || form.notes3) {
-      checkNewPage(30);
-      docPdf.setFillColor(220, 38, 38);
-      docPdf.rect(marginX, y, maxWidth, 8, "F");
-      docPdf.setTextColor(255, 255, 255);
-      docPdf.setFontSize(11);
-      docPdf.setFont("helvetica", "bold");
-      docPdf.text("NOTES", marginX + 5, y + 6);
-      docPdf.setTextColor(0, 0, 0);
-      y += 12;
-
-      const notesData = [
-        ["Good Participation", form.notes1 || "-"],
-        ["Positive", form.notes2 || "-"],
-        ["VIP Prospect", form.notes3 || "-"],
-      ];
-      notesData.forEach(([label, value]) => {
-        checkNewPage(12);
-        docPdf.setFontSize(10);
-        docPdf.setFont("helvetica", "bold");
-        docPdf.text(`${label}:`, marginX + 5, y);
-        docPdf.setFont("helvetica", "normal");
-        const chunks = docPdf.splitTextToSize(value, maxWidth - 50);
-        chunks.forEach((chunk) => {
-          docPdf.text(chunk, marginX + 5, y);
-          y += 5;
-        });
-        y += 2;
-      });
-    }
-    y += 3;
-
-    // Jatha Details Section
-    if (Array.isArray(form.jathaDetails) && form.jathaDetails.length > 0) {
-      checkNewPage(30);
-      docPdf.setFillColor(220, 38, 38);
-      docPdf.rect(marginX, y, maxWidth, 8, "F");
-      docPdf.setTextColor(255, 255, 255);
-      docPdf.setFontSize(11);
-      docPdf.setFont("helvetica", "bold");
-      docPdf.text("JATHA DETAILS", marginX + 5, y + 6);
-      docPdf.setTextColor(0, 0, 0);
-      y += 12;
-
-      // Table header
-      checkNewPage(15);
-      docPdf.setFillColor(241, 245, 249);
-      docPdf.rect(marginX, y, maxWidth, 8, "F");
-      docPdf.setFontSize(9);
-      docPdf.setFont("helvetica", "bold");
-      docPdf.text("Area Name", marginX + 5, y + 5);
-      docPdf.text("Department", marginX + 50, y + 5);
-      docPdf.text("Days", marginX + 100, y + 5);
-      docPdf.text("Date From", marginX + 120, y + 5);
-      docPdf.text("Date To", marginX + 160, y + 5);
-      y += 10;
-
-      // Table rows
-      form.jathaDetails.forEach((j, i) => {
-        checkNewPage(10);
-        docPdf.setFontSize(9);
-        docPdf.setFont("helvetica", "normal");
-        docPdf.text(`${i + 1}.`, marginX + 2, y);
-        docPdf.text(j.areaName || "-", marginX + 8, y);
-        docPdf.text(j.departmentName || "-", marginX + 50, y);
-        docPdf.text(j.jathaTotalDay || "-", marginX + 100, y);
-        docPdf.text(j.dateFrom || "-", marginX + 120, y);
-        docPdf.text(j.dateTo || "-", marginX + 160, y);
-        y += 7;
-      });
-    }
-
-    // Footer
-    const totalPages = docPdf.internal.pages.length - 1;
-    for (let i = 1; i <= totalPages; i++) {
-      docPdf.setPage(i);
-      docPdf.setFontSize(8);
-      docPdf.setTextColor(128, 128, 128);
-      docPdf.text(
-        `Submitted by: ${user?.email || "N/A"} | Date: ${new Date().toLocaleDateString()}`,
-        pageWidth / 2,
-        pageHeight - 8,
-        { align: "center" },
-      );
-      docPdf.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 5, {
-        align: "center",
-      });
-    }
-
-    docPdf.save(
-      `call_form_${selectedProspect.badgeId || selectedProspect.id}.pdf`,
-    );
   };
 
   const doc = selectedDoc;
@@ -869,12 +644,10 @@ function UserDashboard() {
                       <label className="mb-1 block text-xs font-medium text-slate-600">
                         Department of Sewa (optional)
                       </label>
-                      <input
-                        type="text"
+                      <JathaDepartmentSelect
                         value={form.departmentOfSewa}
                         onChange={updateForm("departmentOfSewa")}
                         disabled={viewOnly}
-                        placeholder="e.g. Langar Seva, Main Kitchen"
                         className="w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm disabled:bg-slate-50"
                       />
                     </div>
@@ -917,7 +690,7 @@ function UserDashboard() {
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-medium text-slate-600">
-                        Free Sewa
+                        Ferry Sewa
                       </label>
                       <select
                         value={form.freeSewa}
@@ -1188,7 +961,6 @@ function UserDashboard() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

@@ -27,12 +27,27 @@ const EMPTY_FORM = {
   jathaRecord: "",
 };
 
+function parseJathaDetails(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw !== "string" || !raw.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export function useJathaData(isAdmin = false) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [entries, setEntries] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterDept, setFilterDept] = useState("");
+  const [filterArea, setFilterArea] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
   const [viewEntry, setViewEntry] = useState(null);
   const [editEntry, setEditEntry] = useState(null);
   const [editForm, setEditForm] = useState(EMPTY_FORM);
@@ -111,22 +126,40 @@ export function useJathaData(isAdmin = false) {
     loadData();
   }, [loadData]);
 
+  const hasJathaFilter = filterDept || filterArea || filterDateFrom || filterDateTo;
+
   const filteredEntries = entries.filter(({ prospect, log }) => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return true;
-    const fields = [
-      prospect.name,
-      prospect.badgeId,
-      prospect.phoneNumber,
-      prospect.address,
-      log.submittedBy,
-      log.attendance,
-    ];
-    return fields.some((f) =>
-      String(f || "")
-        .toLowerCase()
-        .includes(q),
-    );
+    if (q) {
+      const fields = [
+        prospect.name,
+        prospect.badgeId,
+        prospect.phoneNumber,
+        prospect.address,
+        log.submittedBy,
+        log.attendance,
+      ];
+      if (!fields.some((f) => String(f || "").toLowerCase().includes(q)))
+        return false;
+    }
+
+    if (hasJathaFilter) {
+      const jathas = parseJathaDetails(log.jathaDetails);
+      const matched = jathas.some((j) => {
+        if (filterDept && j.departmentName !== filterDept) return false;
+        if (filterArea && j.areaName !== filterArea) return false;
+        if (filterDateFrom || filterDateTo) {
+          const jFrom = j.dateFrom || "";
+          const jTo = j.dateTo || "";
+          if (filterDateFrom && jTo && jTo < filterDateFrom) return false;
+          if (filterDateTo && jFrom && jFrom > filterDateTo) return false;
+        }
+        return true;
+      });
+      if (!matched) return false;
+    }
+
+    return true;
   });
 
   const openEdit = (entry) => {
@@ -186,6 +219,14 @@ export function useJathaData(isAdmin = false) {
     entries,
     searchQuery,
     setSearchQuery,
+    filterDept,
+    setFilterDept,
+    filterArea,
+    setFilterArea,
+    filterDateFrom,
+    setFilterDateFrom,
+    filterDateTo,
+    setFilterDateTo,
     viewEntry,
     setViewEntry,
     editEntry,

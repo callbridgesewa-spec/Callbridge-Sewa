@@ -73,6 +73,66 @@ export function docToDisplay(doc) {
       getAttr(doc, "bloodgroup", "bloodGroup", "BloodGroup") ||
       getAttrByKeyMatch(doc, "bloodgroup", "bloodGroup", "BloodGroup") ||
       "-",
+    badgeStatus:
+      getAttr(doc, "badgeStatus", "BadgeStatus") ||
+      getAttrByKeyMatch(doc, "badgeStatus") ||
+      "-",
+    gender:
+      getAttr(doc, "gender", "Gender") ||
+      getAttrByKeyMatch(doc, "gender") ||
+      "-",
+    age:
+      getAttr(doc, "age", "Age") ||
+      getAttrByKeyMatch(doc, "age") ||
+      "-",
+    dateOfBirth:
+      getAttr(doc, "dateOfBirth", "DateOfBirth", "dob", "DOB") ||
+      getAttrByKeyMatch(doc, "dateOfBirth", "dob") ||
+      "-",
+    maritalStatus:
+      getAttr(doc, "maritalStatus", "MaritalStatus") ||
+      getAttrByKeyMatch(doc, "maritalStatus") ||
+      "-",
+    aadhar:
+      getAttr(doc, "aadhar", "Aadhar", "aadharNumber", "aadhaar") ||
+      getAttrByKeyMatch(doc, "aadhar", "aadhaar", "aadharNumber") ||
+      "-",
+    guardian:
+      getAttr(doc, "guardian", "Guardian", "fatherHusbandName") ||
+      getAttrByKeyMatch(doc, "guardian", "fatherHusbandName") ||
+      "-",
+    emergencyContact:
+      getAttr(doc, "emergencyContact", "EmergencyContact") ||
+      getAttrByKeyMatch(doc, "emergencyContact") ||
+      "-",
+    DeptFinalisedName:
+      getAttr(doc, "DeptFinalisedName", "departmentName") ||
+      getAttrByKeyMatch(doc, "DeptFinalisedName", "departmentName") ||
+      "-",
+    permanentAddress:
+      getAttr(doc, "permanentAddress", "PermanentAddress") ||
+      getAttrByKeyMatch(doc, "permanentAddress") ||
+      "-",
+    locality:
+      getAttr(doc, "locality", "Locality") ||
+      getAttrByKeyMatch(doc, "locality") ||
+      "-",
+    NamdaanDOI:
+      getAttr(doc, "NamdaanDOI", "dateOfInitiation") ||
+      getAttrByKeyMatch(doc, "NamdaanDOI", "dateOfInitiation") ||
+      "-",
+    namdaanInitiated:
+      getAttr(doc, "namdaanInitiated") ||
+      getAttrByKeyMatch(doc, "namdaanInitiated") ||
+      "-",
+    NamdaanInitiationBy:
+      getAttr(doc, "NamdaanInitiationBy", "initiationBy") ||
+      getAttrByKeyMatch(doc, "NamdaanInitiationBy", "initiationBy") ||
+      "-",
+    NamdaanInitiationPlace:
+      getAttr(doc, "NamdaanInitiationPlace", "initiationPlace") ||
+      getAttrByKeyMatch(doc, "NamdaanInitiationPlace", "initiationPlace") ||
+      "-",
   };
 }
 

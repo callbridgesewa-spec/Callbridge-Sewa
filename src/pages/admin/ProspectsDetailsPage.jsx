@@ -21,10 +21,11 @@ import {
   deleteCallLogsForProspect,
   deleteCallLogsForProspects,
 } from "../../services/callLogsService";
-import { jsPDF } from "jspdf";
+import { generateCallingFormPDF } from "../../utils/callingFormPdf";
 import { ActionMenu } from "../../components/ActionMenu";
 import { JathaAreaSelect } from "../../components/JathaAreaSelect";
 import { JathaDepartmentSelect } from "../../components/JathaDepartmentSelect";
+import { ProspectInfo } from "../../components/ProspectInfo";
 
 const SEARCH_BY_OPTIONS = [
   "Name of Sewadar/Sewadarni",
@@ -35,392 +36,192 @@ const SEARCH_BY_OPTIONS = [
   "Blood Group",
 ];
 
-// --- Excel → Appwrite schema mapping (do not change schema) ---
-const SCHEMA_FIELDS = [
-  "fullName",
-  "address",
-  "permanentAddress",
-  "mobile",
-  "bloodgroup",
-  "aadhar",
-  "dateOfBirth",
-  "age",
-  "guardian",
-  "badgeId",
-  "gender",
-  "badgeStatus",
-  "emergencyContact",
-  "DeptFinalisedName",
-  "maritalStatus",
-  "locality",
-  "assignedTo",
-  "NamdaanDOI",
-  "namdaanInitiated",
-  "NamdaanInitiationBy",
-  "NamdaanInitiationPlace",
+// --- Fixed template columns ---
+const TEMPLATE_COLUMNS = [
+  { header: "Name",            field: "fullName",              required: true  },
+  { header: "Mobile",          field: "mobile",                required: true  },
+  { header: "Badge ID",        field: "badgeId",               required: false },
+  { header: "Badge Status",    field: "badgeStatus",           required: false },
+  { header: "Gender",          field: "gender",                required: false },
+  { header: "DOB",             field: "dateOfBirth",           required: false },
+  { header: "Age",             field: "age",                   required: false },
+  { header: "Blood Group",     field: "bloodgroup",            required: false },
+  { header: "Aadhaar",         field: "aadhar",                required: false },
+  { header: "Guardian",        field: "guardian",              required: false },
+  { header: "Marital Status",  field: "maritalStatus",         required: false },
+  { header: "Emergency",       field: "emergencyContact",      required: false },
+  { header: "Address",         field: "address",               required: false },
+  { header: "Perm Address",    field: "permanentAddress",      required: false },
+  { header: "Locality",        field: "locality",              required: false },
+  { header: "Dept Name",       field: "DeptFinalisedName",     required: false },
+  { header: "Namdaan DOI",     field: "NamdaanDOI",            required: false },
+  { header: "Namdaan Init",    field: "namdaanInitiated",      required: false },
+  { header: "Init By",         field: "NamdaanInitiationBy",   required: false },
+  { header: "Init Place",      field: "NamdaanInitiationPlace",required: false },
 ];
 
-const REQUIRED_IMPORT_FIELDS = ["fullName", "mobile"];
 
-/** Normalize for matching: lowercase, remove spaces and non-alphanumeric */
-function normalizeHeader(str) {
-  return String(str ?? "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
-}
-
-/**
- * Excel column names (and truncated variants) → schema field.
- * Keys are normalized (lowercase, no spaces/special chars).
- * Includes short forms so "Blood Grou", "Aadhaar C", "Date of Bir", "Batch Num", "Dept Finali", "Marita" etc. match.
- */
-const EXCEL_HEADER_TO_SCHEMA = {
-  name: "fullName",
-  nam: "fullName",
-  fullname: "fullName",
-  prospect: "fullName",
-  nameofsewadarsewadarni: "fullName",
-  address: "address",
-  residentialaddress: "address",
-  residentialaddr: "address",
-  location: "address",
-  addr: "address",
-  phone: "mobile",
-  mobile: "mobile",
-  phoneno: "mobile",
-  contact: "mobile",
-  bloodgroup: "bloodgroup",
-  bloodgrou: "bloodgroup",
-  blood: "bloodgroup",
-  bg: "bloodgroup",
-  aadhaarcard: "aadhar",
-  aadhaarc: "aadhar",
-  aadhar: "aadhar",
-  dateofbirth: "dateOfBirth",
-  dateofbir: "dateOfBirth",
-  dob: "dateOfBirth",
-  age: "age",
-  guardianname: "guardian",
-  guardian: "guardian",
-  fathersname: "guardian",
-  batchnumber: "badgeId",
-  batchnum: "badgeId",
-  batch: "badgeId",
-  badgeid: "badgeId",
-  badge: "badgeId",
-  gender: "gender",
-  badgestatus: "badgeStatus",
-  badgestat: "badgeStatus",
-  emergencycontact: "emergencyContact",
-  emergency: "emergencyContact",
-  emerg: "emergencyContact",
-  deptfinalisedname: "DeptFinalisedName",
-  deptfinali: "DeptFinalisedName",
-  department: "DeptFinalisedName",
-  maritalstatus: "maritalStatus",
-  marita: "maritalStatus",
-  marital: "maritalStatus",
-  rovillagetownlocalitydistrict: "locality",
-  locality: "locality",
-  village: "locality",
-  namdaandoi: "NamdaanDOI",
-  namdaaninitiated: "namdaanInitiated",
-  namdaaninitiationby: "NamdaanInitiationBy",
-  namdaaninitiationplace: "NamdaanInitiationPlace",
-  permanentaddress: "permanentAddress",
-  permaddr: "permanentAddress",
-  permanantaddress: "permanentAddress",
-  // assignedTo is never set from import; admin assigns later
-};
-
-/** Also match headers that contain these keywords (after normalization) to handle variants like "Namadan Date of Initialisation" */
-const KEYWORD_TO_SCHEMA = [
-  ["dateofinitialisation", "NamdaanDOI"],
-  ["dateofinitiation", "NamdaanDOI"],
-  ["namadan", "NamdaanDOI"],
-  ["namdaan", "NamdaanDOI"],
-  ["doi", "NamdaanDOI"],
-  ["initiationby", "NamdaanInitiationBy"],
-  ["initiationplace", "NamdaanInitiationPlace"],
-  ["initiated", "namdaanInitiated"],
-];
-
-function matchExcelHeaderToSchemaField(excelHeader) {
-  const normalized = normalizeHeader(excelHeader);
-  if (!normalized) return null;
-
-  // 1. Exact normalized match
-  if (EXCEL_HEADER_TO_SCHEMA[normalized])
-    return EXCEL_HEADER_TO_SCHEMA[normalized];
-
-  // 2. Prefix match: truncated header (e.g. "bloodgrou") is prefix of a known key, or key is prefix of header
-  if (normalized.length >= 2) {
-    for (const key of Object.keys(EXCEL_HEADER_TO_SCHEMA)) {
-      if (key.startsWith(normalized) || normalized.startsWith(key))
-        return EXCEL_HEADER_TO_SCHEMA[key];
-    }
-  }
-
-  // 3. Normalized schema field name equals header
-  for (const field of SCHEMA_FIELDS) {
-    if (normalizeHeader(field) === normalized) return field;
-  }
-
-  // 4. Header contains keyword from KEYWORD_TO_SCHEMA
-  for (const [keyword, schemaField] of KEYWORD_TO_SCHEMA) {
-    if (normalized.includes(keyword)) return schemaField;
-  }
-
-  // 5. Header contains normalized schema field name
-  for (const field of SCHEMA_FIELDS) {
-    const nf = normalizeHeader(field);
-    if (nf && normalized.includes(nf)) return field;
-  }
-
-  return null;
-}
-
-/** Build auto-mapping: array of length headers.length, each element is schemaField string or null (unmapped) */
-function buildAutoMapping(excelHeaders) {
-  return excelHeaders.map((h) => matchExcelHeaderToSchemaField(h));
-}
-
-/** Parse Excel to raw headers and rows (no schema applied yet) */
-function parseExcelFileRaw(file) {
+/** Parse Excel file using the fixed template — exact header match, case-insensitive trim */
+function parseExcelWithTemplate(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const data = new Uint8Array(e.target.result);
+        const data     = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: "array" });
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-        if (!json.length) {
-          resolve({ headers: [], rows: [] });
+        const sheet    = workbook.Sheets[workbook.SheetNames[0]];
+        const raw      = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        if (!raw.length) { resolve({ prospects: [], skipped: 0 }); return; }
+
+        const fileHeaders = raw[0].map((h) => String(h ?? "").trim().toLowerCase());
+
+        // Map each template column to the index it sits at in the uploaded file
+        const colIndex = {};
+        TEMPLATE_COLUMNS.forEach(({ header, field }) => {
+          const idx = fileHeaders.indexOf(header.toLowerCase());
+          if (idx !== -1) colIndex[field] = idx;
+        });
+
+        // Check required columns are present
+        const missing = TEMPLATE_COLUMNS
+          .filter((c) => c.required && colIndex[c.field] === undefined)
+          .map((c) => c.header);
+        if (missing.length) {
+          reject(new Error(`Missing required columns: ${missing.join(", ")}. Please use the provided template.`));
           return;
         }
-        const headers = json[0].map((h) => String(h ?? "").trim());
-        const rows = json
-          .slice(1)
-          .filter((row) =>
-            row.some((cell) => cell != null && String(cell).trim()),
-          );
-        resolve({ headers, rows });
-      } catch (err) {
-        reject(err);
-      }
+
+        const dataRows = raw.slice(1).filter((row) =>
+          row.some((cell) => cell != null && String(cell).trim())
+        );
+
+        let skipped = 0;
+        const prospects = dataRows
+          .map((row) => {
+            const p = {};
+            TEMPLATE_COLUMNS.forEach(({ field }) => {
+              const idx = colIndex[field];
+              p[field] = idx !== undefined && row[idx] != null
+                ? String(row[idx]).trim()
+                : "";
+            });
+            return p;
+          })
+          .filter((p) => {
+            const hasName   = p.fullName?.trim();
+            const hasMobile = p.mobile?.trim();
+            if (!hasName || !hasMobile) { skipped++; return false; }
+            return true;
+          });
+
+        resolve({ prospects, skipped });
+      } catch (err) { reject(err); }
     };
     reader.onerror = () => reject(reader.error);
     reader.readAsArrayBuffer(file);
   });
 }
 
-/** Build prospect objects from raw rows using columnIndex → schemaField mapping. Unmapped columns are skipped. */
-function buildProspectsFromMapping(rows, columnMapping) {
-  return rows.map((row) => {
-    const prospect = {};
-    columnMapping.forEach((schemaField, colIndex) => {
-      if (!schemaField || schemaField === "__skip__") return;
-      const raw = row[colIndex];
-      const value = raw == null || raw === "" ? "" : String(raw).trim();
-      prospect[schemaField] = value;
-    });
-    return prospect;
-  });
-}
-
-function getImportSignature(prospects) {
-  const rows = prospects
-    .map((p) =>
-      [
-        p.fullName ?? p.name,
-        p.address,
-        p.mobile,
-        p.badgeId,
-        p.assignedTo,
-        p.bloodgroup,
-      ].join("|"),
-    )
-    .sort();
-  return rows.join("\n");
-}
-
-/** Full DB export: all prospect fields (no Appwrite system fields) */
-const FULL_EXPORT_COLUMNS = [
-  "fullName",
-  "address",
-  "permanentAddress",
-  "mobile",
-  "bloodgroup",
-  "aadhar",
-  "dateOfBirth",
-  "age",
-  "guardian",
-  "badgeId",
-  "gender",
-  "badgeStatus",
-  "emergencyContact",
-  "DeptFinalisedName",
-  "maritalStatus",
-  "locality",
-  "assignedTo",
-  "NamdaanDOI",
-  "namdaanInitiated",
-  "NamdaanInitiationBy",
-  "NamdaanInitiationPlace",
+// --- Export: call log fields (compact headers, no redundant prospect name) ---
+const CALL_LOG_EXPORT_FIELDS = [
+  ["submittedBy",       "Submitted By"],
+  ["select",            "Select"],
+  ["callBack",          "Call Back"],
+  ["notInterest",       "Not Interest"],
+  ["departmentOfSewa",  "Dept of Sewa"],
+  ["needToWork",        "Need to Work"],
+  ["notes1",            "Notes 1"],
+  ["notes2",            "Notes 2"],
+  ["notes3",            "Notes 3"],
+  ["nominalListSelect", "Nominal List"],
+  ["visitSelect",       "Visit Select"],
+  ["freeSewa",          "Ferry Sewa"],
+  ["attendance",        "Attendance"],
+  ["jathaRecord",       "Jatha Record"],
+  ["jathaDetails",      "Jatha Details"],
 ];
 
-const FULL_EXPORT_HEADERS = {
-  fullName: "Name of Sewadar/Sewadarni",
-  address: "Residential Address",
-  permanentAddress: "Permanent Address",
-  mobile: "Phone Number",
-  bloodgroup: "Blood Group",
-  aadhar: "Aadhar Number",
-  dateOfBirth: "Date of Birth",
-  age: "Age",
-  guardian: "Father's/Husband's Name",
-  badgeId: "Badge ID",
-  gender: "Gender",
-  badgeStatus: "Badge Status",
-  emergencyContact: "Emergency Contact Number",
-  DeptFinalisedName: "Department Finalised Name",
-  maritalStatus: "Marital Status",
-  locality: "R/O Village/Town/Locality/District",
-  assignedTo: "Assigned To",
-  NamdaanDOI: "Date of Initiation (DOI)",
-  namdaanInitiated: "Initiated",
-  NamdaanInitiationBy: "Initiation By",
-  NamdaanInitiationPlace: "Initiation Place",
-};
-
-/** Call form fields only (no Appwrite IDs, timestamps, or internal keys). */
-const CALL_LOG_HUMAN_FIELDS = [
-  ["prospectName", "Sewadar name"],
-  ["submittedBy", "Submitted by"],
-  ["select", "Calling status"],
-  ["callBack", "Call back"],
-  ["notInterest", "Not interested"],
-  ["needToWork", "Need to work"],
-  ["departmentOfSewa", "Department of sewa"],
-  ["notes1", "Notes 1"],
-  ["notes2", "Notes 2"],
-  ["notes3", "Notes 3"],
-  ["nominalListSelect", "Nominal list"],
-  ["visitSelect", "Visit"],
-  ["freeSewa", "Free sewa"],
-  ["attendance", "Attendance"],
-  ["jathaRecord", "Jatha record"],
-  ["jathaDetails", "Jatha details"],
+// --- Export: visit assignment fields added to prospects ---
+const VISIT_EXPORT_FIELDS = [
+  ["visitName",      "Visit Name"],
+  ["assignDuty",     "Assign Duty"],
+  ["departmentName", "Visit Dept"],
+  ["inchargeName",   "Incharge"],
 ];
 
 function excelCellValue(value) {
   if (value === undefined || value === null) return "";
   if (value instanceof Date) return value.toISOString();
   if (typeof value === "object") {
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return String(value);
-    }
+    try { return JSON.stringify(value); } catch { return String(value); }
   }
   return String(value);
 }
 
-function prospectHumanCell(doc, key) {
-  if (key === "badgeId") {
-    const v = doc.badgeId ?? doc.batchNumber;
-    return excelCellValue(v);
-  }
-  return excelCellValue(doc[key]);
-}
-
-function formatJathaDetailsHuman(raw) {
+function formatJathaDetails(raw) {
   let parsed = raw;
   if (typeof raw === "string" && raw.trim()) {
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      return excelCellValue(raw);
-    }
+    try { parsed = JSON.parse(raw); } catch { return excelCellValue(raw); }
   }
-  if (!Array.isArray(parsed) || !parsed.length) {
-    return typeof raw === "string" ? raw : excelCellValue(raw);
-  }
+  if (!Array.isArray(parsed) || !parsed.length) return excelCellValue(raw);
   return parsed
     .map((row, i) => {
       const parts = Object.entries(row || {})
-        .filter(([, v]) => v != null && String(v).trim() !== "")
+        .filter(([, v]) => v != null && String(v).trim())
         .map(([k, v]) => `${k}: ${v}`);
-      return parts.length ? `Entry ${i + 1}: ${parts.join("; ")}` : "";
+      return parts.length ? `[${i + 1}] ${parts.join("; ")}` : "";
     })
     .filter(Boolean)
     .join(" | ");
 }
 
-function callLogHumanCell(log, key) {
-  const raw = log[key];
-  if (key === "jathaDetails") {
-    return formatJathaDetailsHuman(raw);
-  }
-  return excelCellValue(raw);
-}
-
-/** Most recently created call log per prospect (by Appwrite $createdAt). */
-function mapLatestLogByProspectId(callLogDocs) {
-  const latest = new Map();
+/** Single-sheet export — prospect fields (matching import template) + visit fields + latest call log */
+function exportProspectsWorkbook(prospectDocs, callLogDocs) {
+  // Map latest call log per prospect
+  const latestLog = new Map();
   for (const log of callLogDocs) {
     const pid = String(log.prospectId || "").trim();
     if (!pid) continue;
-    const prev = latest.get(pid);
-    if (
-      !prev ||
-      new Date(log.$createdAt || 0).getTime() >
-        new Date(prev.$createdAt || 0).getTime()
-    ) {
-      latest.set(pid, log);
-    }
+    const prev = latestLog.get(pid);
+    if (!prev || new Date(log.$createdAt || 0) > new Date(prev.$createdAt || 0))
+      latestLog.set(pid, log);
   }
-  return latest;
-}
 
-/**
- * Admin export: human-readable columns only — prospect profile + latest call form,
- * and a second sheet of all submitted forms (no Appwrite metadata).
- */
-function exportAdminUnifiedWorkbook(prospectDocs, callLogDocs) {
-  const latestByProspect = mapLatestLogByProspectId(callLogDocs);
-
-  const prospectHeaders = FULL_EXPORT_COLUMNS.map(
-    (key) => FULL_EXPORT_HEADERS[key] || key,
-  );
-  const formKeys = CALL_LOG_HUMAN_FIELDS.map(([k]) => k);
-  const combinedHeaders = [
-    ...prospectHeaders,
-    ...CALL_LOG_HUMAN_FIELDS.map(([, label]) => `Calling form: ${label}`),
+  const headers = [
+    ...TEMPLATE_COLUMNS.map((c) => c.header),
+    ...VISIT_EXPORT_FIELDS.map(([, h]) => h),
+    ...CALL_LOG_EXPORT_FIELDS.map(([, h]) => h),
   ];
 
-  const combinedRows = prospectDocs.map((doc) => {
-    const latest = latestByProspect.get(String(doc.$id || "").trim());
-    const prospectCells = FULL_EXPORT_COLUMNS.map((k) => prospectHumanCell(doc, k));
-    const formCells = formKeys.map((k) =>
-      latest ? callLogHumanCell(latest, k) : "",
+  const rows = prospectDocs.map((doc) => {
+    const log = latestLog.get(String(doc.$id || "").trim());
+
+    const prospectCells = TEMPLATE_COLUMNS.map(({ field }) =>
+      field === "badgeId"
+        ? excelCellValue(doc.badgeId ?? doc.batchNumber)
+        : excelCellValue(doc[field])
     );
-    return [...prospectCells, ...formCells];
+
+    const visitCells = VISIT_EXPORT_FIELDS.map(([field]) =>
+      excelCellValue(doc[field])
+    );
+
+    const logCells = CALL_LOG_EXPORT_FIELDS.map(([field]) => {
+      if (!log) return "";
+      return field === "jathaDetails"
+        ? formatJathaDetails(log[field])
+        : excelCellValue(log[field]);
+    });
+
+    return [...prospectCells, ...visitCells, ...logCells];
   });
 
-  const logHeaders = CALL_LOG_HUMAN_FIELDS.map(([, label]) => label);
-  const logRows = callLogDocs.map((log) =>
-    formKeys.map((k) => callLogHumanCell(log, k)),
-  );
-
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  ws["!cols"] = headers.map((h) => ({ wch: Math.max(h.length + 2, 14) }));
   const wb = XLSX.utils.book_new();
-  const wsCombined = XLSX.utils.aoa_to_sheet([combinedHeaders, ...combinedRows]);
-  XLSX.utils.book_append_sheet(wb, wsCombined, "Prospects and latest form");
-  const wsLogs = XLSX.utils.aoa_to_sheet([logHeaders, ...logRows]);
-  XLSX.utils.book_append_sheet(wb, wsLogs, "All call logs");
-  const stamp = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, `callbridge_full_export_${stamp}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, ws, "Prospects");
+  XLSX.writeFile(wb, `sewadar_export_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 function calculateAgeFromDob(dateStr) {
@@ -731,45 +532,25 @@ function ProspectsDetailsPage() {
     setImporting(true);
     setError("");
     try {
-      const { headers, rows } = await parseExcelFileRaw(file);
-      if (!headers.length || !rows.length) {
-        setError("Excel file has no headers or data rows.");
-        e.target.value = "";
-        return;
-      }
-      const columnMapping = buildAutoMapping(headers);
-      const mappedFields = new Set(columnMapping.filter(Boolean));
-      const missingRequired = REQUIRED_IMPORT_FIELDS.filter(
-        (r) => !mappedFields.has(r),
-      );
-      if (missingRequired.length) {
+      const { prospects, skipped } = await parseExcelWithTemplate(file);
+      if (!prospects.length) {
         setError(
-          `Required columns not found: ${missingRequired.join(
-            ", ",
-          )}. Please add columns named "Name of Sewadar/Sewadarni" (prospect name) and "Phone" (or "Mobile") in your Excel.`,
+          skipped > 0
+            ? `All ${skipped} rows were skipped (missing Name or Mobile). Please check the file.`
+            : "No data rows found in the file.",
         );
         e.target.value = "";
         return;
       }
-      const prospects = buildProspectsFromMapping(rows, columnMapping).map(
-        (p) => ({
-          ...p,
-          assignedTo: "", // leave unassigned; admin will assign later
-        }),
+      await createProspectsBulk(
+        prospects.map((p) => ({ ...p, assignedTo: "" })),
       );
-      const signature = getImportSignature(prospects);
-      if (importedSignatures.has(signature)) {
-        setError(
-          "This Excel file has already been imported. No duplicate data added.",
-        );
-        e.target.value = "";
-        return;
-      }
-      await createProspectsBulk(prospects);
-      setImportedSignatures((prev) => new Set(prev).add(signature));
       await loadProspects();
+      if (skipped > 0) {
+        setError(`Uploaded ${prospects.length} records. ${skipped} rows skipped (missing Name or Mobile).`);
+      }
     } catch (err) {
-      setError(err.message || "Failed to import prospects.");
+      setError(err.message || "Failed to upload prospects.");
     } finally {
       setImporting(false);
       e.target.value = "";
@@ -786,7 +567,7 @@ function ProspectsDetailsPage() {
         return;
       }
       const callLogDocs = await listAllCallLogs();
-      exportAdminUnifiedWorkbook(prospectDocs, callLogDocs);
+      exportProspectsWorkbook(prospectDocs, callLogDocs);
     } catch (err) {
       setError(err.message || "Failed to export prospects.");
     } finally {
@@ -894,6 +675,7 @@ function ProspectsDetailsPage() {
               onChange={handleImportExcel}
               className="hidden"
             />
+
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -913,7 +695,7 @@ function ProspectsDetailsPage() {
                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
                 />
               </svg>
-              {importing ? "Importing…" : "Import Excel"}
+              {importing ? "Uploading…" : "Upload Excel"}
             </button>
             <button
               type="button"
@@ -934,7 +716,7 @@ function ProspectsDetailsPage() {
                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                 />
               </svg>
-              {exporting ? "Exporting…" : "Export Excel"}
+              {exporting ? "Downloading…" : "Download Excel"}
             </button>
           </div>
         </div>
@@ -1023,104 +805,75 @@ function ProspectsDetailsPage() {
                   className="flex max-h-[95vh] w-full max-w-3xl flex-col rounded-t-xl bg-white shadow-xl sm:rounded-xl"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-4">
+                  <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
                     <button
                       type="button"
                       onClick={() => setEditCallLog(null)}
-                      className="text-sm font-medium text-slate-600 hover:text-slate-900"
+                      className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-900"
                     >
-                      ← Back
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 19l-7-7 7-7"
+                        />
+                      </svg>
+                      Back
                     </button>
-                    <h2 className="text-lg font-semibold text-slate-900">
-                      Edit Calling Form – {prospect.name}
-                    </h2>
-                    <span className="w-14" />
+                    <div className="flex flex-col items-center">
+                      <h2 className="text-base font-semibold text-slate-900 sm:text-lg">
+                        {prospect.name}
+                      </h2>
+                      <p className="text-xs text-slate-500">
+                        Calling Form — Edit
+                      </p>
+                    </div>
+                    <span className="w-16" />
                   </div>
 
                   <form
                     onSubmit={handleSubmitEditCall}
-                    className="flex-1 overflow-y-auto bg-sky-100/80 p-4 sm:p-6"
+                    className="flex-1 overflow-y-auto bg-sky-50/60 p-4 sm:p-6"
                   >
-                    <div className="mb-4 grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-4">
-                      <div className="col-span-2 sm:col-span-2">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Name
-                        </p>
-                        <p className="mt-0.5 text-sm font-medium text-slate-900">
-                          {prospect.name || "-"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Badge ID
-                        </p>
-                        <p className="mt-0.5 text-sm text-slate-900">
-                          {prospect.badgeId || "-"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Badge Status
-                        </p>
-                        <p className="mt-0.5 text-sm text-slate-900">
-                          {prospect.badgeStatus || "-"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Phone
-                        </p>
-                        <p className="mt-0.5 text-sm text-slate-900">
-                          {prospect.phoneNumber || "-"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Blood Group
-                        </p>
-                        <p className="mt-0.5 text-sm text-slate-900">
-                          {prospect.bloodGroup || "-"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Gender
-                        </p>
-                        <p className="mt-0.5 text-sm text-slate-900">
-                          {prospect.gender || "-"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Marital Status
-                        </p>
-                        <p className="mt-0.5 text-sm text-slate-900">
-                          {prospect.maritalStatus || "-"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Age
-                        </p>
-                        <p className="mt-0.5 text-sm text-slate-900">
-                          {prospect.age || "-"}
-                        </p>
-                      </div>
-                      <div className="col-span-2">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Address
-                        </p>
-                        <p className="mt-0.5 text-sm text-slate-900">
-                          {prospect.address || "-"}
-                        </p>
-                      </div>
-                      <div className="col-span-2">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Permanent Address
-                        </p>
-                        <p className="mt-0.5 text-sm text-slate-900">
-                          {prospect.permanentAddress || "-"}
-                        </p>
+                    {/* Compact sewadar banner */}
+                    <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
+                      <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
+                        Sewadar Information
+                      </p>
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
+                        {[
+                          ["Name", prospect.name],
+                          ["Badge ID", prospect.badgeId],
+                          ["Badge Status", prospect.badgeStatus],
+                          ["Phone", prospect.phoneNumber],
+                          ["Blood Group", prospect.bloodGroup],
+                          ["Gender", prospect.gender],
+                          ["Age", prospect.age],
+                          ["Marital Status", prospect.maritalStatus],
+                        ].map(([label, val]) => (
+                          <div key={label}>
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                              {label}
+                            </p>
+                            <p className="mt-0.5 text-sm font-medium text-slate-800">
+                              {val || "-"}
+                            </p>
+                          </div>
+                        ))}
+                        <div className="col-span-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                            Address
+                          </p>
+                          <p className="mt-0.5 text-sm text-slate-700">
+                            {prospect.address || "-"}
+                          </p>
+                        </div>
                       </div>
                     </div>
 
@@ -1192,8 +945,7 @@ function ProspectsDetailsPage() {
                           <label className="mb-1 block text-xs font-medium text-slate-600">
                             Department of Sewa
                           </label>
-                          <input
-                            type="text"
+                          <JathaDepartmentSelect
                             value={callForm.departmentOfSewa}
                             onChange={(e) =>
                               setCallForm((f) => ({
@@ -1251,7 +1003,7 @@ function ProspectsDetailsPage() {
                           </div>
                           <div>
                             <label className="mb-1 block text-xs font-medium text-slate-600">
-                              Free Sewa
+                              Ferry Sewa
                             </label>
                             <select
                               value={callForm.freeSewa}
@@ -1326,6 +1078,37 @@ function ProspectsDetailsPage() {
                         rows={4}
                         className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm"
                       />
+                    </div>
+
+                    {/* Notes */}
+                    <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
+                      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-red-600">
+                        Notes
+                      </p>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        {[
+                          ["notes1", "Good Participation"],
+                          ["notes2", "Positive"],
+                          ["notes3", "VIP Prospect"],
+                        ].map(([field, label]) => (
+                          <div key={field}>
+                            <label className="mb-1 block text-xs font-medium text-slate-600">
+                              {label}
+                            </label>
+                            <textarea
+                              value={callForm[field]}
+                              onChange={(e) =>
+                                setCallForm((f) => ({
+                                  ...f,
+                                  [field]: e.target.value,
+                                }))
+                              }
+                              rows={3}
+                              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                            />
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     <div className="mt-4 space-y-3 rounded-lg border border-slate-200 bg-white p-4">
@@ -1818,8 +1601,7 @@ function ProspectsDetailsPage() {
                     <input
                       type="date"
                       value={addForm.dateOfBirth}
-                      onChange={(e) => {
-                        const value = e.target.value;
+                      onChange={({ target: { value } }) => {
                         setAddForm((f) => ({
                           ...f,
                           dateOfBirth: value,
@@ -2020,211 +1802,37 @@ function ProspectsDetailsPage() {
             }
 
             const handleDownload = () => {
-              const docPdf = new jsPDF();
-              const pageWidth = docPdf.internal.pageSize.getWidth();
-              const pageHeight = docPdf.internal.pageSize.getHeight();
-              const marginX = 15;
-              const marginY = 15;
-              const maxWidth = pageWidth - marginX * 2;
-              let y = marginY;
-
-              // Helper to add a new page if needed
-              const checkNewPage = (requiredSpace = 10) => {
-                if (y + requiredSpace > pageHeight - marginY) {
-                  docPdf.addPage();
-                  y = marginY;
-                  return true;
-                }
-                return false;
-              };
-
-              // Header with title
-              docPdf.setFillColor(220, 38, 38); // Red background
-              docPdf.rect(0, 0, pageWidth, 25, "F");
-              docPdf.setTextColor(255, 255, 255);
-              docPdf.setFontSize(18);
-              docPdf.setFont("helvetica", "bold");
-              docPdf.text("CALLING FORM", pageWidth / 2, 18, {
-                align: "center",
+              generateCallingFormPDF({
+                prospect,
+                doc:         prospect.raw || {},
+                form:        log,
+                submittedBy: log.submittedBy || "",
+                fileName:    `call_form_${prospect.badgeId || prospect.id}.pdf`,
               });
-              docPdf.setTextColor(0, 0, 0);
-              y = 35;
+            };
 
-              // Prospect Information Box
-              docPdf.setFillColor(241, 245, 249); // Light slate
-              docPdf.roundedRect(marginX, y, maxWidth, 30, 3, 3, "F");
-              docPdf.setFontSize(12);
-              docPdf.setFont("helvetica", "bold");
-              docPdf.text("SEWADAR INFORMATION", marginX + 5, y + 8);
-              docPdf.setFont("helvetica", "normal");
-              docPdf.setFontSize(10);
-              docPdf.text(`Name: ${prospect.name || "-"}`, marginX + 5, y + 15);
-              docPdf.text(
-                `Badge ID: ${prospect.badgeId || "-"}`,
-                marginX + 5,
-                y + 21,
-              );
-              docPdf.text(
-                `Phone: ${prospect.phoneNumber || "-"}`,
-                marginX + 100,
-                y + 15,
-              );
-              docPdf.text(
-                `Address: ${prospect.address || "-"}`,
-                marginX + 100,
-                y + 21,
-              );
-              y += 35;
-
-              // Calling Data Select Option Section
-              checkNewPage(25);
-              docPdf.setFillColor(220, 38, 38);
-              docPdf.rect(marginX, y, maxWidth, 8, "F");
-              docPdf.setTextColor(255, 255, 255);
-              docPdf.setFontSize(11);
-              docPdf.setFont("helvetica", "bold");
-              docPdf.text("CALLING DATA SELECT OPTION", marginX + 5, y + 6);
-              docPdf.setTextColor(0, 0, 0);
-              y += 12;
-
-              const callingData = [
-                ["Select", log.select || "-"],
-                ["Call Back", log.callBack || "-"],
-                ["Not Interest", log.notInterest || "-"],
-              ];
-              callingData.forEach(([label, value]) => {
-                checkNewPage(8);
-                docPdf.setFontSize(10);
-                docPdf.setFont("helvetica", "normal");
-                docPdf.text(`${label}:`, marginX + 5, y);
-                docPdf.setFont("helvetica", "bold");
-                docPdf.text(value, marginX + 45, y);
-                y += 7;
-              });
-              y += 3;
-
-              // Transfer Data Section
-              checkNewPage(25);
-              docPdf.setFillColor(220, 38, 38);
-              docPdf.rect(marginX, y, maxWidth, 8, "F");
-              docPdf.setTextColor(255, 255, 255);
-              docPdf.setFontSize(11);
-              docPdf.setFont("helvetica", "bold");
-              docPdf.text("TRANSFER DATA", marginX + 5, y + 6);
-              docPdf.setTextColor(0, 0, 0);
-              y += 12;
-
-              const transferData = [
-                ["Nominal List Select", log.nominalListSelect || "-"],
-                ["Visit Select", log.visitSelect || "-"],
-                ["Free Sewa", log.freeSewa || "-"],
-              ];
-              transferData.forEach(([label, value]) => {
-                checkNewPage(8);
-                docPdf.setFontSize(10);
-                docPdf.setFont("helvetica", "normal");
-                docPdf.text(`${label}:`, marginX + 5, y);
-                docPdf.setFont("helvetica", "bold");
-                docPdf.text(value, marginX + 60, y);
-                y += 7;
-              });
-              y += 3;
-
-              // Need to Work Section
-              checkNewPage(30);
-              docPdf.setFillColor(220, 38, 38);
-              docPdf.rect(marginX, y, maxWidth, 8, "F");
-              docPdf.setTextColor(255, 255, 255);
-              docPdf.setFontSize(11);
-              docPdf.setFont("helvetica", "bold");
-              docPdf.text("NEED TO WORK", marginX + 5, y + 6);
-              docPdf.setTextColor(0, 0, 0);
-              y += 12;
-
-              const needToWork = [
-                ["Good participation", log.notes1 || "-"],
-                ["Positive", log.notes2 || "-"],
-                ["VIP prospect", log.notes3 || "-"],
-              ];
-              needToWork.forEach(([label, value]) => {
-                checkNewPage(12);
-                docPdf.setFontSize(10);
-                docPdf.setFont("helvetica", "bold");
-                docPdf.text(`${label}:`, marginX + 5, y);
-                docPdf.setFont("helvetica", "normal");
-                const chunks = docPdf.splitTextToSize(
-                  value || "-",
-                  maxWidth - 50,
+            const yesNoChip = (val) => {
+              if (!val || val === "-")
+                return <span className="text-slate-400">—</span>;
+              if (val === "Yes")
+                return (
+                  <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                    Yes
+                  </span>
                 );
-                chunks.forEach((chunk) => {
-                  docPdf.text(chunk, marginX + 5, y);
-                  y += 5;
-                });
-                y += 2;
-              });
-              y += 3;
-
-              // Jatha Details Section
-              if (Array.isArray(jathas) && jathas.length > 0) {
-                checkNewPage(30);
-                docPdf.setFillColor(220, 38, 38);
-                docPdf.rect(marginX, y, maxWidth, 8, "F");
-                docPdf.setTextColor(255, 255, 255);
-                docPdf.setFontSize(11);
-                docPdf.setFont("helvetica", "bold");
-                docPdf.text("JATHA DETAILS", marginX + 5, y + 6);
-                docPdf.setTextColor(0, 0, 0);
-                y += 12;
-
-                // Table header
-                checkNewPage(15);
-                docPdf.setFillColor(241, 245, 249);
-                docPdf.rect(marginX, y, maxWidth, 8, "F");
-                docPdf.setFontSize(9);
-                docPdf.setFont("helvetica", "bold");
-                docPdf.text("Area Name", marginX + 5, y + 5);
-                docPdf.text("Department", marginX + 50, y + 5);
-                docPdf.text("Days", marginX + 100, y + 5);
-                docPdf.text("Date From", marginX + 120, y + 5);
-                docPdf.text("Date To", marginX + 160, y + 5);
-                y += 10;
-
-                // Table rows
-                jathas.forEach((j, i) => {
-                  checkNewPage(10);
-                  docPdf.setFontSize(9);
-                  docPdf.setFont("helvetica", "normal");
-                  docPdf.text(`${i + 1}.`, marginX + 2, y);
-                  docPdf.text(j.areaName || "-", marginX + 8, y);
-                  docPdf.text(j.departmentName || "-", marginX + 50, y);
-                  docPdf.text(j.jathaTotalDay || "-", marginX + 100, y);
-                  docPdf.text(j.dateFrom || "-", marginX + 120, y);
-                  docPdf.text(j.dateTo || "-", marginX + 160, y);
-                  y += 7;
-                });
-              }
-
-              // Footer
-              const totalPages = docPdf.internal.pages.length - 1;
-              for (let i = 1; i <= totalPages; i++) {
-                docPdf.setPage(i);
-                docPdf.setFontSize(8);
-                docPdf.setTextColor(128, 128, 128);
-                docPdf.text(
-                  `Submitted by: ${log.submittedBy} | Date: ${new Date(log.$createdAt).toLocaleDateString()}`,
-                  pageWidth / 2,
-                  pageHeight - 8,
-                  { align: "center" },
+              if (val === "No")
+                return (
+                  <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-600">
+                    No
+                  </span>
                 );
-                docPdf.text(
-                  `Page ${i} of ${totalPages}`,
-                  pageWidth / 2,
-                  pageHeight - 5,
-                  { align: "center" },
+              if (val === "N/A")
+                return (
+                  <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500">
+                    N/A
+                  </span>
                 );
-              }
-
-              docPdf.save(`call_form_${prospect.badgeId || prospect.id}.pdf`);
+              return <span className="text-sm text-slate-800">{val}</span>;
             };
 
             return (
@@ -2238,376 +1846,203 @@ function ProspectsDetailsPage() {
                   className="flex max-h-[95vh] w-full max-w-3xl flex-col rounded-t-xl bg-white shadow-xl sm:rounded-xl"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-4">
+                  {/* Header */}
+                  <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
                     <button
                       type="button"
                       onClick={() => setViewCallLog(null)}
-                      className="text-sm font-medium text-slate-600 hover:text-slate-900"
+                      className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-900"
                     >
-                      ← Back
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 19l-7-7 7-7"
+                        />
+                      </svg>
+                      Back
                     </button>
-                    <h2 className="text-lg font-semibold text-slate-900">
-                      Sewadar Details – {prospect.name}
-                    </h2>
-                    <span className="w-14" />
+                    <div className="flex flex-col items-center">
+                      <h2 className="text-base font-semibold text-slate-900 sm:text-lg">
+                        {prospect.name}
+                      </h2>
+                      <p className="text-xs text-slate-500">
+                        Calling Form — View
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDownload}
+                      className="flex items-center gap-1.5 rounded-lg bg-sky-600 px-3 py-2 text-xs font-medium text-white hover:bg-sky-700"
+                      title="Download as PDF"
+                    >
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                        />
+                      </svg>
+                      PDF
+                    </button>
                   </div>
 
-                  <form className="flex-1 overflow-y-auto bg-sky-100/80 p-4 sm:p-6">
-                    {/* Prospect Info - All Details */}
-                    <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
-                      Sewadar Information
-                    </p>
-                    <div className="mb-4 grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-4">
-                      <div>
-                        <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                          Name
-                        </label>
-                        <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                          {prospect.name || "-"}
+                  {/* Body */}
+                  <div className="flex-1 overflow-y-auto bg-sky-50/60 p-4 sm:p-6">
+                    {/* Sewadar info via shared component */}
+                    <ProspectInfo prospect={prospect} />
+
+                    {/* Calling Data + Transfer Data side by side */}
+                    <div className="mb-4 grid gap-3 md:grid-cols-2">
+                      <div className="rounded-lg border border-slate-200 bg-white p-4">
+                        <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
+                          Calling Data Select Option
                         </p>
+                        <dl className="space-y-2">
+                          {[
+                            ["Select", log.select],
+                            ["Call Back", log.callBack],
+                            ["Not Interest", log.notInterest],
+                            ["Dept of Sewa", log.departmentOfSewa],
+                          ].map(([label, val]) => (
+                            <div
+                              key={label}
+                              className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2 last:border-0 last:pb-0"
+                            >
+                              <dt className="text-xs font-medium text-slate-500">
+                                {label}
+                              </dt>
+                              <dd>{yesNoChip(val)}</dd>
+                            </div>
+                          ))}
+                        </dl>
                       </div>
-                      <div>
-                        <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                          Badge ID
-                        </label>
-                        <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                          {prospect.badgeId || "-"}
+
+                      <div className="rounded-lg border border-slate-200 bg-white p-4">
+                        <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
+                          Transfer Data
                         </p>
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                          Badge Status
-                        </label>
-                        <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                          {prospect.badgeStatus || "-"}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                          Phone
-                        </label>
-                        <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                          {prospect.phoneNumber || "-"}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                          Blood Group
-                        </label>
-                        <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                          {prospect.bloodGroup || "-"}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                          Gender
-                        </label>
-                        <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                          {prospect.gender || "-"}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                          Age
-                        </label>
-                        <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                          {prospect.age || "-"}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                          Marital Status
-                        </label>
-                        <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                          {prospect.maritalStatus || "-"}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                          Aadhaar
-                        </label>
-                        <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                          {prospect.aadhar || "-"}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                          Guardian/Father Name
-                        </label>
-                        <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                          {prospect.guardian || "-"}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                          Emergency Contact
-                        </label>
-                        <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                          {prospect.emergencyContact || "-"}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-                          Dept Finalised Name
-                        </label>
-                        <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                          {prospect.DeptFinalisedName || "-"}
-                        </p>
+                        <dl className="space-y-2">
+                          {[
+                            ["Nominal List", log.nominalListSelect],
+                            ["Visit Select", log.visitSelect],
+                            ["Ferry Sewa", log.freeSewa],
+                            ["Attendance", log.attendance],
+                            ["Jatha Record", log.jathaRecord],
+                          ].map(([label, val]) => (
+                            <div
+                              key={label}
+                              className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2 last:border-0 last:pb-0"
+                            >
+                              <dt className="text-xs font-medium text-slate-500">
+                                {label}
+                              </dt>
+                              <dd>{yesNoChip(val)}</dd>
+                            </div>
+                          ))}
+                        </dl>
                       </div>
                     </div>
 
-                    {/* Address Sections */}
+                    {/* Need to Work */}
                     <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
-                      <label className="mb-2 block text-sm font-bold text-slate-900 uppercase tracking-wide">
-                        Residential Address
-                      </label>
-                      <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                        {prospect.address || "-"}
-                      </p>
-                    </div>
-                    <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
-                      <label className="mb-2 block text-sm font-bold text-slate-900 uppercase tracking-wide">
-                        Permanent Address
-                      </label>
-                      <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                        {prospect.permanentAddress || "-"}
-                      </p>
-                    </div>
-                    <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
-                      <label className="mb-2 block text-sm font-bold text-slate-900 uppercase tracking-wide">
-                        R/O Village/Town/Locality/District
-                      </label>
-                      <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                        {prospect.locality || "-"}
-                      </p>
-                    </div>
-
-                    {/* Namdaan Details */}
-                    <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
-                      Namdaan Details
-                    </p>
-                    <div className="mb-4 grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-4">
-                      <div>
-                        <label className="mb-1 block text-[10px] font-medium text-slate-500">
-                          Doi
-                        </label>
-                        <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                          {prospect.NamdaanDOI || "-"}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-[10px] font-medium text-slate-500">
-                          Initiated
-                        </label>
-                        <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                          {prospect.namdaanInitiated || "-"}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-[10px] font-medium text-slate-500">
-                          Initiated By
-                        </label>
-                        <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                          {prospect.NamdaanInitiationBy || "-"}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-[10px] font-medium text-slate-500">
-                          Initiation Place
-                        </label>
-                        <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                          {prospect.NamdaanInitiationPlace || "-"}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Calling Data Section */}
-                    <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
-                      <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
-                        Calling Data
-                      </p>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-slate-600">
-                            Select
-                          </label>
-                          <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                            {log.select || "-"}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-slate-600">
-                            Call Back
-                          </label>
-                          <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                            {log.callBack || "-"}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-slate-600">
-                            Not Interest
-                          </label>
-                          <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                            {log.notInterest || "-"}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-slate-600">
-                            Department of Sewa
-                          </label>
-                          <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                            {log.departmentOfSewa || "-"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Transfer Data Section */}
-                    <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
-                      <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
-                        Transfer Data
-                      </p>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-slate-600">
-                            Nominal List Select
-                          </label>
-                          <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                            {log.nominalListSelect || "-"}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-slate-600">
-                            Visit Select
-                          </label>
-                          <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                            {log.visitSelect || "-"}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-slate-600">
-                            Free Sewa
-                          </label>
-                          <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                            {log.freeSewa || "-"}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-slate-600">
-                            Attendance
-                          </label>
-                          <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                            {log.attendance || "-"}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-slate-600">
-                            Jatha Record
-                          </label>
-                          <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                            {log.jathaRecord || "-"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Need to Work Section */}
-                    <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
-                      <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
+                      <p className="mb-2 text-sm font-bold uppercase tracking-wider text-red-600">
                         Need to Work
                       </p>
-                      <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm whitespace-pre-line">
-                        {log.needToWork || "-"}
+                      <p className="whitespace-pre-line rounded border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                        {log.needToWork || (
+                          <span className="text-slate-400 italic">
+                            Nothing noted
+                          </span>
+                        )}
                       </p>
                     </div>
 
-                    {/* Notes Section */}
-                    {(log.notes1 || log.notes2 || log.notes3) && (
-                      <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
-                        <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
-                          Notes
-                        </p>
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                          {log.notes1 && (
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-600">
-                                Good Participation
-                              </label>
-                              <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                                {log.notes1}
-                              </p>
-                            </div>
-                          )}
-                          {log.notes2 && (
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-600">
-                                Positive
-                              </label>
-                              <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                                {log.notes2}
-                              </p>
-                            </div>
-                          )}
-                          {log.notes3 && (
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-600">
-                                VIP Prospect
-                              </label>
-                              <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-                                {log.notes3}
-                              </p>
-                            </div>
-                          )}
-                        </div>
+                    {/* Notes */}
+                    <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
+                      <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
+                        Notes
+                      </p>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        {[
+                          ["Good Participation", log.notes1],
+                          ["Positive", log.notes2],
+                          ["VIP Prospect", log.notes3],
+                        ].map(([label, val]) => (
+                          <div key={label}>
+                            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                              {label}
+                            </p>
+                            <p className="min-h-[3rem] rounded border border-slate-100 bg-slate-50 px-2 py-1.5 text-sm text-slate-700">
+                              {val || (
+                                <span className="text-slate-300 italic">—</span>
+                              )}
+                            </p>
+                          </div>
+                        ))}
                       </div>
-                    )}
+                    </div>
 
-                    {/* Jatha Details Section */}
+                    {/* Jatha Details */}
                     {Array.isArray(jathas) && jathas.length > 0 && (
                       <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
                         <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
                           Jatha Details
                         </p>
                         <div className="overflow-x-auto">
-                          <table className="w-full border-collapse text-left text-sm">
+                          <table className="w-full min-w-[480px] border-collapse text-left text-sm">
                             <thead>
-                              <tr className="border-b border-slate-200 bg-slate-50">
-                                <th className="px-4 py-2 font-semibold text-slate-700">
-                                  Area Name
+                              <tr className="border-b border-slate-200 bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
+                                <th className="px-3 py-2 font-semibold">#</th>
+                                <th className="px-3 py-2 font-semibold">
+                                  Area
                                 </th>
-                                <th className="px-4 py-2 font-semibold text-slate-700">
+                                <th className="px-3 py-2 font-semibold">
                                   Department
                                 </th>
-                                <th className="px-4 py-2 font-semibold text-slate-700">
+                                <th className="px-3 py-2 font-semibold">
                                   Days
                                 </th>
-                                <th className="px-4 py-2 font-semibold text-slate-700">
-                                  Date From
+                                <th className="px-3 py-2 font-semibold">
+                                  From
                                 </th>
-                                <th className="px-4 py-2 font-semibold text-slate-700">
-                                  Date To
-                                </th>
+                                <th className="px-3 py-2 font-semibold">To</th>
                               </tr>
                             </thead>
                             <tbody>
                               {jathas.map((j, i) => (
                                 <tr
                                   key={i}
-                                  className="border-b border-slate-100"
+                                  className="border-b border-slate-100 hover:bg-slate-50/50"
                                 >
-                                  <td className="px-4 py-2 text-slate-600">
+                                  <td className="px-3 py-2 text-xs text-slate-400">
+                                    {i + 1}
+                                  </td>
+                                  <td className="px-3 py-2 font-medium text-slate-800">
                                     {j.areaName || "-"}
                                   </td>
-                                  <td className="px-4 py-2 text-slate-600">
+                                  <td className="px-3 py-2 text-slate-600">
                                     {j.departmentName || "-"}
                                   </td>
-                                  <td className="px-4 py-2 text-slate-600">
+                                  <td className="px-3 py-2 text-slate-600">
                                     {j.jathaTotalDay || "-"}
                                   </td>
-                                  <td className="px-4 py-2 text-slate-600">
+                                  <td className="px-3 py-2 text-slate-600">
                                     {j.dateFrom || "-"}
                                   </td>
-                                  <td className="px-4 py-2 text-slate-600">
+                                  <td className="px-3 py-2 text-slate-600">
                                     {j.dateTo || "-"}
                                   </td>
                                 </tr>
@@ -2617,7 +2052,31 @@ function ProspectsDetailsPage() {
                         </div>
                       </div>
                     )}
-                  </form>
+
+                    {/* Submitted-by footer */}
+                    <div className="mt-2 rounded-lg border border-slate-100 bg-white px-4 py-3">
+                      <p className="text-xs text-slate-500">
+                        Submitted by{" "}
+                        <span className="font-medium text-slate-700">
+                          {log.submittedBy || "—"}
+                        </span>
+                        {log.$createdAt && (
+                          <>
+                            {" "}
+                            ·{" "}
+                            {new Date(log.$createdAt).toLocaleDateString(
+                              "en-IN",
+                              {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              },
+                            )}
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             );

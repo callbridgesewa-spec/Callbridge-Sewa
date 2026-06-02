@@ -6,7 +6,8 @@ import { getAttr } from "../services/prospectsService";
 // normalized display object) so even if the raw document isn't
 // available the UI still has something to render.
 export function ProspectInfo({ prospect = {}, doc = {} }) {
-  const get = (...keys) => getAttr(doc, ...keys) || "-";
+  const safeDoc = doc || {};
+  const get = (...keys) => getAttr(safeDoc, ...keys) || "-";
   const name = prospect.name || get("fullName", "name");
   const badgeId =
     prospect.badgeId || get("badgeId", "batchNumber", "batchnumber");
@@ -41,7 +42,7 @@ export function ProspectInfo({ prospect = {}, doc = {} }) {
             Badge Status
           </label>
           <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-            {get("badgeStatus")}
+            {prospect.badgeStatus || get("badgeStatus")}
           </p>
         </div>
         <div>
@@ -57,7 +58,7 @@ export function ProspectInfo({ prospect = {}, doc = {} }) {
             Blood Group
           </label>
           <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-            {get("bloodgroup", "bloodGroup")}
+            {prospect.bloodGroup || get("bloodgroup", "bloodGroup")}
           </p>
         </div>
         <div>
@@ -65,7 +66,7 @@ export function ProspectInfo({ prospect = {}, doc = {} }) {
             Gender
           </label>
           <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-            {get("gender")}
+            {prospect.gender || get("gender")}
           </p>
         </div>
         <div>
@@ -73,7 +74,7 @@ export function ProspectInfo({ prospect = {}, doc = {} }) {
             Date of Birth
           </label>
           <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-            {get("dateOfBirth", "dob")}
+            {prospect.dateOfBirth || get("dateOfBirth", "dob")}
           </p>
         </div>
         <div>
@@ -81,7 +82,7 @@ export function ProspectInfo({ prospect = {}, doc = {} }) {
             Age
           </label>
           <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-            {get("age")}
+            {prospect.age || get("age")}
           </p>
         </div>
         <div>
@@ -89,7 +90,7 @@ export function ProspectInfo({ prospect = {}, doc = {} }) {
             Guardian/Father Name
           </label>
           <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-            {get("guardian", "fatherHusbandName")}
+            {prospect.guardian || get("guardian", "fatherHusbandName")}
           </p>
         </div>
         <div>
@@ -97,7 +98,7 @@ export function ProspectInfo({ prospect = {}, doc = {} }) {
             Aadhaar
           </label>
           <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-            {get("aadhar")}
+            {prospect.aadhar || get("aadhar")}
           </p>
         </div>
         <div>
@@ -105,7 +106,7 @@ export function ProspectInfo({ prospect = {}, doc = {} }) {
             Emergency Contact
           </label>
           <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-            {get("emergencyContact")}
+            {prospect.emergencyContact || get("emergencyContact")}
           </p>
         </div>
         <div>
@@ -113,7 +114,7 @@ export function ProspectInfo({ prospect = {}, doc = {} }) {
             Dept Finalised Name
           </label>
           <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-            {get("DeptFinalisedName", "departmentName")}
+            {prospect.DeptFinalisedName || get("DeptFinalisedName", "departmentName")}
           </p>
         </div>
       </div>
@@ -132,7 +133,7 @@ export function ProspectInfo({ prospect = {}, doc = {} }) {
           Permanent Address
         </label>
         <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-          {get("permanentAddress")}
+          {prospect.permanentAddress || get("permanentAddress")}
         </p>
       </div>
       <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
@@ -140,7 +141,7 @@ export function ProspectInfo({ prospect = {}, doc = {} }) {
           R/O Village/Town/Locality/District
         </label>
         <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-          {get("locality")}
+          {prospect.locality || get("locality")}
         </p>
       </div>
       <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
@@ -148,7 +149,7 @@ export function ProspectInfo({ prospect = {}, doc = {} }) {
           Marital Status
         </label>
         <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-          {get("maritalStatus")}
+          {prospect.maritalStatus || get("maritalStatus")}
         </p>
       </div>
 
@@ -162,7 +163,7 @@ export function ProspectInfo({ prospect = {}, doc = {} }) {
             DOI
           </label>
           <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-            {get("NamdaanDOI")}
+            {prospect.NamdaanDOI || get("NamdaanDOI")}
           </p>
         </div>
         <div>
@@ -170,7 +171,7 @@ export function ProspectInfo({ prospect = {}, doc = {} }) {
             Is Initiated
           </label>
           <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-            {get("namdaanInitiated", "namdaanInitiated")}
+            {prospect.namdaanInitiated || get("namdaanInitiated")}
           </p>
         </div>
         <div>
@@ -178,7 +179,7 @@ export function ProspectInfo({ prospect = {}, doc = {} }) {
             Initiation By
           </label>
           <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-            {get("NamdaanInitiationBy", "initiationBy")}
+            {prospect.NamdaanInitiationBy || get("NamdaanInitiationBy", "initiationBy")}
           </p>
         </div>
         <div>
@@ -186,7 +187,7 @@ export function ProspectInfo({ prospect = {}, doc = {} }) {
             Initiation Place
           </label>
           <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-            {get("NamdaanInitiationPlace", "initiationPlace")}
+            {prospect.NamdaanInitiationPlace || get("NamdaanInitiationPlace", "initiationPlace")}
           </p>
         </div>
       </div>
