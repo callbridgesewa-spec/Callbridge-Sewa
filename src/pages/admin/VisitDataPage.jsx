@@ -26,7 +26,6 @@ function VisitDataPage() {
   const {
     loading,
     error,
-    entries,
     searchQuery,
     setSearchQuery,
     viewEntry,
@@ -42,6 +41,7 @@ function VisitDataPage() {
     openEdit,
     handleSaveEdit,
     handleConfirmDelete,
+    reload,
     EMPTY_FORM,
   } = useVisitDataPage(true);
 
@@ -54,10 +54,10 @@ function VisitDataPage() {
   const openAssign = (entry) => {
     setAssignEntry(entry);
     setVisitForm({
-      visitName: entry.prospect.visitName || "",
-      assignDuty: entry.prospect.assignDuty || "",
-      departmentName: entry.prospect.departmentName || "",
-      inchargeName: entry.prospect.inchargeName || "",
+      visitName:      entry.prospect.visitName    || "",
+      assignDuty:     entry.prospect.assignDuty   || "",
+      departmentName: entry.prospect.visitDept    || "",
+      inchargeName:   entry.prospect.inchargeName || "",
     });
     setVisitError("");
     setVisitSuccess("");
@@ -77,6 +77,7 @@ function VisitDataPage() {
         inchargeName: visitForm.inchargeName,
       });
       setVisitSuccess("Visit details saved successfully.");
+      await reload();
       setTimeout(() => setAssignEntry(null), 1200);
     } catch (err) {
       setVisitError(err.message || "Failed to save visit details.");
@@ -200,77 +201,57 @@ function VisitDataPage() {
               className="hidden md:block overflow-x-auto overflow-y-visible"
               style={{ clipPath: "none" }}
             >
-              <table className="w-full min-w-[700px] border-collapse text-left text-sm">
+              <table className="w-full min-w-[800px] border-collapse text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="px-4 py-3 font-semibold text-slate-700">
-                      Name
-                    </th>
-                    <th className="px-4 py-3 font-semibold text-slate-700">
-                      Badge ID
-                    </th>
-                    <th className="px-4 py-3 font-semibold text-slate-700">
-                      Phone
-                    </th>
-                    <th className="px-4 py-3 font-semibold text-slate-700">
-                      Address
-                    </th>
-                    <th className="px-4 py-3 font-semibold text-slate-700">
-                      Submitted By
-                    </th>
-                    <th className="px-4 py-3 font-semibold text-slate-700">
-                      Date
-                    </th>
-                    <th className="px-4 py-3 font-semibold text-slate-700">
-                      Actions
-                    </th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">Name</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">Badge ID</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">Phone</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">Visit Name</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">Assign Duty</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">Dept</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">Incharge</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredEntries.map((entry, i) => {
                     const { prospect, log } = entry;
+                    const hasAssignment = prospect.visitName || prospect.assignDuty || prospect.visitDept || prospect.inchargeName;
                     return (
                       <tr
                         key={String(log.$id || prospect.id || i)}
                         className="border-b border-slate-100 hover:bg-slate-50/50"
                       >
-                        <td className="px-4 py-3 font-medium text-slate-900">
-                          {prospect.name || "-"}
-                        </td>
-                        <td className="px-4 py-3 text-slate-600">
-                          {prospect.badgeId || "-"}
-                        </td>
+                        <td className="px-4 py-3 font-medium text-slate-900">{prospect.name || "-"}</td>
+                        <td className="px-4 py-3 text-slate-600">{prospect.badgeId || "-"}</td>
                         <td className="px-4 py-3 text-slate-600">
                           {toTelHref(prospect.phoneNumber) ? (
-                            <a
-                              href={toTelHref(prospect.phoneNumber)}
-                              className="text-slate-700 hover:underline"
-                            >
+                            <a href={toTelHref(prospect.phoneNumber)} className="text-slate-700 hover:underline">
                               {prospect.phoneNumber}
                             </a>
-                          ) : (
-                            prospect.phoneNumber || "-"
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-slate-600 max-w-[200px] truncate">
-                          {prospect.address || "-"}
+                          ) : (prospect.phoneNumber || "-")}
                         </td>
                         <td className="px-4 py-3 text-slate-600">
-                          {log.submittedBy || "-"}
+                          {prospect.visitName || <span className="text-slate-300">—</span>}
                         </td>
                         <td className="px-4 py-3 text-slate-600">
-                          {log.$createdAt
-                            ? new Date(log.$createdAt).toLocaleDateString()
-                            : "-"}
+                          {prospect.assignDuty || <span className="text-slate-300">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          {prospect.visitDept || <span className="text-slate-300">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          {prospect.inchargeName || <span className="text-slate-300">—</span>}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
                               onClick={() => openAssign(entry)}
-                              className="rounded-md bg-sky-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-sky-700 whitespace-nowrap"
+                              className={`rounded-md px-2.5 py-1.5 text-xs font-medium text-white whitespace-nowrap ${hasAssignment ? "bg-emerald-600 hover:bg-emerald-700" : "bg-sky-600 hover:bg-sky-700"}`}
                             >
-                              Assign Visit
+                              {hasAssignment ? "Edit Visit" : "Assign Visit"}
                             </button>
                             <ActionMenu
                               onView={() => setViewEntry(entry)}
@@ -330,26 +311,31 @@ function VisitDataPage() {
                 prospect={viewEntry.prospect}
                 doc={viewEntry.prospect.raw}
               />
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                <p className="font-semibold text-slate-900">
-                  {viewEntry.prospect.name || "-"}
+
+              {/* Visit Assignment */}
+              <div>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-sky-700">
+                  Visit Assignment
                 </p>
-                <p className="mt-0.5 text-xs text-slate-600">
-                  {viewEntry.prospect.address || "-"}
-                </p>
-                <p className="mt-0.5 text-xs text-slate-600">
-                  Badge: {viewEntry.prospect.badgeId || "-"} · Phone:{" "}
-                  {toTelHref(viewEntry.prospect.phoneNumber) ? (
-                    <a
-                      href={toTelHref(viewEntry.prospect.phoneNumber)}
-                      className="text-slate-700 hover:underline"
-                    >
-                      {viewEntry.prospect.phoneNumber}
-                    </a>
-                  ) : (
-                    viewEntry.prospect.phoneNumber || "-"
-                  )}
-                </p>
+                {viewEntry.prospect.visitName || viewEntry.prospect.assignDuty || viewEntry.prospect.visitDept || viewEntry.prospect.inchargeName ? (
+                  <div className="grid grid-cols-2 gap-2 rounded-lg border border-sky-200 bg-sky-50 p-3">
+                    {[
+                      ["Visit Name",   viewEntry.prospect.visitName],
+                      ["Assign Duty",  viewEntry.prospect.assignDuty],
+                      ["Department",   viewEntry.prospect.visitDept],
+                      ["Incharge",     viewEntry.prospect.inchargeName],
+                    ].map(([label, val]) => (
+                      <div key={label}>
+                        <p className="text-[10px] font-semibold uppercase text-slate-500">{label}</p>
+                        <p className="mt-0.5 font-medium text-slate-800">{val || "-"}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="rounded-lg border border-dashed border-slate-200 px-3 py-2 text-xs text-slate-400">
+                    No visit assignment yet. Use &quot;Assign Visit&quot; to add details.
+                  </p>
+                )}
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3">

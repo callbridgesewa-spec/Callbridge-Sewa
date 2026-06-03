@@ -65,13 +65,7 @@ function AdminLayout() {
                     >
                       Existing Users
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => { dashboardActions.openAttendanceModal(); setActionsMenuOpen(false) }}
-                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                    >
-                      Attendance
-                    </button>
+
                     <button
                       type="button"
                       onClick={() => { dashboardActions.openJathaListsModal(); setActionsMenuOpen(false) }}
@@ -120,13 +114,7 @@ function AdminLayout() {
             >
               Existing Users
             </button>
-            <button
-              type="button"
-              onClick={dashboardActions.openAttendanceModal}
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-            >
-              Attendance
-            </button>
+
             <button
               type="button"
               onClick={dashboardActions.openJathaListsModal}

@@ -80,74 +80,79 @@ function VisitDataPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[500px] border-collapse text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="px-4 py-3 font-semibold text-slate-700">
-                    Name
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-slate-700">
-                    Badge ID
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-slate-700">
-                    Phone
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-slate-700">
-                    Address
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-slate-700">
-                    Date
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-slate-700">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredEntries.map(({ prospect, log }, i) => (
-                  <tr
-                    key={prospect.id || i}
-                    className="border-b border-slate-100 hover:bg-slate-50/50"
-                  >
-                    <td className="px-4 py-3 font-medium text-slate-900">
-                      {prospect.name || "-"}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {prospect.badgeId || "-"}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
+          <>
+            {/* Mobile card view */}
+            <div className="flex flex-col gap-2 md:hidden">
+              {filteredEntries.map(({ prospect, log }, i) => (
+                <div
+                  key={prospect.id || i}
+                  className="flex items-start justify-between gap-2 rounded-lg border border-slate-200 bg-white p-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-slate-900">{prospect.name || "-"}</p>
+                    <p className="mt-0.5 truncate text-xs text-slate-600">{prospect.address || "-"}</p>
+                    <p className="mt-0.5 text-xs text-slate-600">
                       {toTelHref(prospect.phoneNumber) ? (
-                        <a
-                          href={toTelHref(prospect.phoneNumber)}
-                          className="text-slate-700 hover:underline"
-                        >
+                        <a href={toTelHref(prospect.phoneNumber)} className="text-slate-700 hover:underline">
                           {prospect.phoneNumber}
                         </a>
-                      ) : (
-                        prospect.phoneNumber || "-"
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 max-w-[200px] truncate">
-                      {prospect.address || "-"}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {log.$createdAt
-                        ? new Date(log.$createdAt).toLocaleDateString()
-                        : "-"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <ActionMenu
-                        onView={() => setViewEntry({ prospect, log })}
-                        showEditForm={false}
-                        showDeleteProspect={false}
-                      />
-                    </td>
+                      ) : (prospect.phoneNumber || "-")}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-slate-500">
+                      ID: {prospect.badgeId || "-"} · {log.$createdAt ? new Date(log.$createdAt).toLocaleDateString() : "-"}
+                    </p>
+                  </div>
+                  <ActionMenu
+                    onView={() => setViewEntry({ prospect, log })}
+                    showEditForm={false}
+                    showDeleteProspect={false}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table view */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[500px] border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50">
+                    <th className="px-4 py-3 font-semibold text-slate-700">Name</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">Badge ID</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">Phone</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">Address</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">Date</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filteredEntries.map(({ prospect, log }, i) => (
+                    <tr key={prospect.id || i} className="border-b border-slate-100 hover:bg-slate-50/50">
+                      <td className="px-4 py-3 font-medium text-slate-900">{prospect.name || "-"}</td>
+                      <td className="px-4 py-3 text-slate-600">{prospect.badgeId || "-"}</td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {toTelHref(prospect.phoneNumber) ? (
+                          <a href={toTelHref(prospect.phoneNumber)} className="text-slate-700 hover:underline">
+                            {prospect.phoneNumber}
+                          </a>
+                        ) : (prospect.phoneNumber || "-")}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 max-w-[200px] truncate">{prospect.address || "-"}</td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {log.$createdAt ? new Date(log.$createdAt).toLocaleDateString() : "-"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <ActionMenu
+                          onView={() => setViewEntry({ prospect, log })}
+                          showEditForm={false}
+                          showDeleteProspect={false}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

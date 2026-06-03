@@ -39,9 +39,9 @@ function mapEntryToRow(entry, index) {
 
 function SignatureBlock({ title, subtitle }) {
   return (
-    <div className="flex flex-col items-center justify-end min-h-[6.5rem] px-3 py-3 sm:min-h-[7rem] print:min-h-[52px] print:py-2">
+    <div className="flex flex-col items-center justify-end min-h-[9rem] px-3 pb-3 pt-2 sm:min-h-[10rem] print:min-h-[150px] print:pb-3 print:pt-2">
       <div
-        className="w-full border-b-2 border-slate-800 mb-3"
+        className="w-4/5 border-b-2 border-slate-800 mb-2"
         aria-hidden="true"
       />
       <div className="text-center">
@@ -60,7 +60,7 @@ function SignatureBlock({ title, subtitle }) {
 
 function FooterFieldRow({ label, value, onChange }) {
   return (
-    <div className="flex items-center gap-3 px-3 py-2 print:py-1">
+    <div className="flex items-center gap-3 px-3 py-2 print:py-1.5">
       <span className="w-28 text-right text-[10px] font-medium text-slate-700 sm:text-[11px]">
         {label}
       </span>
@@ -239,7 +239,7 @@ function NominalRollSheet({ entries = [], title = "Nominal Roll Sewa Jatha" }) {
         <section
           key={idx}
           className={[
-            "overflow-x-auto rounded-xl border border-slate-300 bg-white shadow-md",
+            "md:overflow-x-auto rounded-xl border border-slate-300 bg-white shadow-md",
             "print:overflow-visible print:rounded-none print:border-0 print:shadow-none print:w-full print:m-0 print:p-0",
             idx !== safePage ? "hidden print:block" : "",
             idx < safePages.length - 1 ? "print-break-after" : "",
@@ -247,8 +247,118 @@ function NominalRollSheet({ entries = [], title = "Nominal Roll Sewa Jatha" }) {
             .filter(Boolean)
             .join(" ")}
         >
-          {/* ── Inner scroll wrapper (screen only min-width) ── */}
-          <div className="min-w-[960px] text-[10px] text-slate-900 sm:min-w-[1000px] sm:text-[11px] print:min-w-0 print:w-full print:text-[10px] flex-1 flex flex-col print:flex print:flex-col">
+          {/* ══ MOBILE CARD VIEW — screen only, never printed ══ */}
+          <div className="md:hidden print:hidden">
+            {idx === 0 && (
+              <div className="border-b border-slate-200 bg-slate-50 p-3">
+                {/* Branding row */}
+                <div className="mb-3 flex items-center gap-3">
+                  <img src="/nominal_logo.jpeg" alt="" className="h-10 w-auto shrink-0 object-contain" />
+                  <div>
+                    <p className="text-xs font-bold tracking-widest text-slate-800">
+                      SATSANG CENTRES IN INDIA
+                    </p>
+                    <input
+                      value={meta.headerBetweenTitles}
+                      onChange={setMetaField("headerBetweenTitles")}
+                      placeholder="(sub-heading)"
+                      className="mt-0.5 w-full border-0 bg-transparent text-[11px] text-slate-600 outline-none placeholder:text-slate-300"
+                    />
+                    <p className="mt-0.5 text-[11px] font-bold uppercase tracking-wide text-slate-900">
+                      {title}
+                    </p>
+                  </div>
+                </div>
+                {/* Meta fields — vertical list */}
+                <div className="space-y-2">
+                  {[
+                    ["Satsang Place", "satsangPlace"],
+                    ["Area",          "area"],
+                    ["Zone",          "zone"],
+                    ["Jathedar",      "jathedar"],
+                    ["Driver",        "driverName"],
+                    ["Vehicle Type",  "vehicleType"],
+                    ["Vehicle No.",   "vehicleNo"],
+                    ["Place of Sewa", "placeOfSewa"],
+                    ["From",          "from"],
+                    ["To",            "to"],
+                  ].map(([label, field]) => (
+                    <div key={field} className="flex items-center gap-2">
+                      <span className="w-28 shrink-0 text-[11px] font-medium text-slate-500">
+                        {label}:
+                      </span>
+                      <input
+                        value={meta[field]}
+                        onChange={setMetaField(field)}
+                        className="flex-1 border-b border-slate-300 bg-transparent px-1 pb-0.5 text-sm text-slate-800 outline-none focus:border-slate-600"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {idx > 0 && (
+              <div className="border-b border-slate-200 bg-slate-50 py-2 text-center text-xs font-semibold text-slate-600">
+                {title} — Page {idx + 1}
+              </div>
+            )}
+
+            {/* Row cards */}
+            <div className="space-y-2 p-2">
+              {page.map((row, i) => (
+                <div
+                  key={i}
+                  className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+                >
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="shrink-0 rounded bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">
+                      #{row?.srNo ?? idx * 5 + i + 1}
+                    </span>
+                    <input
+                      value={row?.name ?? ""}
+                      onChange={(e) =>
+                        updateRow(idx * 5 + i, "name", e.target.value)
+                      }
+                      placeholder="Name of Sewadar / Sewadarni"
+                      className="flex-1 border-b border-slate-300 bg-transparent pb-0.5 text-sm font-medium text-slate-900 outline-none focus:border-slate-600 placeholder:text-slate-300"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                    {[
+                      ["Father's / Husband's Name", "guardian"],
+                      ["M / F",                     "gender"],
+                      ["Age",                       "age"],
+                      ["Aadhar No.",                "aadhar"],
+                      ["Locality",                  "locality"],
+                      ["Mobile No.",                "mobile"],
+                      ["Badge ID",                  "badgeId"],
+                    ].map(([label, field]) => (
+                      <div key={field} className={field === "guardian" || field === "locality" ? "col-span-2" : ""}>
+                        <p className="text-[10px] font-medium text-slate-400">{label}</p>
+                        <input
+                          value={row?.[field] ?? ""}
+                          onChange={(e) =>
+                            updateRow(idx * 5 + i, field, e.target.value)
+                          }
+                          placeholder="—"
+                          className="w-full border-b border-slate-200 bg-transparent pb-0.5 text-sm text-slate-800 outline-none focus:border-slate-500 placeholder:text-slate-200"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {page.length === 0 && (
+                <p className="py-8 text-center text-sm text-slate-400">
+                  No entries on this page yet
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* ── Inner scroll wrapper — desktop + print only ── */}
+          <div className="hidden md:block print:block min-w-[960px] text-[10px] text-slate-900 sm:min-w-[1000px] sm:text-[11px] print:min-w-0 print:w-full print:text-[10px]">
 
             {/* ══ HEADER — first page only ══ */}
             {idx === 0 && (
@@ -397,7 +507,7 @@ function NominalRollSheet({ entries = [], title = "Nominal Roll Sewa Jatha" }) {
             )}
 
             {/* ══ Data table ══ */}
-            <table className="w-full border-collapse flex-1 print:table-fixed">
+            <table className="w-full border-collapse print:table-fixed">
               <thead>
                 <tr className="bg-slate-100">
                   {[
@@ -424,7 +534,7 @@ function NominalRollSheet({ entries = [], title = "Nominal Roll Sewa Jatha" }) {
                 {page.map((row, i) => {
                   const stripe = i % 2 === 1 ? "bg-slate-50/80" : "bg-white";
                   return (
-                    <tr key={i} className={`h-12 print:h-[68px] ${stripe}`}>
+                    <tr key={i} className={`h-12 print:h-[58px] ${stripe}`}>
                       <td className="border-r border-b border-slate-800 px-1 text-center align-middle font-medium text-slate-700">
                         {row?.srNo || ""}
                       </td>
@@ -466,20 +576,22 @@ function NominalRollSheet({ entries = [], title = "Nominal Roll Sewa Jatha" }) {
                 })}
               </tbody>
             </table>
-          </div>{/* end min-w wrapper */}
+          </div>{/* end desktop/print inner wrapper */}
 
-          {/* ══ FOOTER / SIGNATURES — last page only, outside the min-w wrapper ══ */}
+          {/* ══ FOOTER / SIGNATURES — last page only, desktop + print only ══ */}
           {idx === safePages.length - 1 && (
-            <div className="w-full border-t border-slate-800 text-[10px] text-slate-900 sm:text-[11px]">
-              {/* Signature row */}
-              <div className="grid grid-cols-2 border-b border-slate-800">
-                <div className="border-r border-slate-800">
+            <div className="nominal-footer hidden md:block print:block w-full border-t-2 border-slate-800 text-[10px] text-slate-900 sm:text-[11px]">
+              {/* Signature row — two equal halves with generous height for writing */}
+              <div className="grid grid-cols-2">
+                <div className="border-r border-b border-slate-800">
                   <SignatureBlock title="(Signature of Jathedar)" />
                 </div>
-                <SignatureBlock
-                  title="(Signature of Functionary)"
-                  subtitle="(Affix Rubber Stamp)"
-                />
+                <div className="border-b border-slate-800">
+                  <SignatureBlock
+                    title="(Signature of Functionary)"
+                    subtitle="(Affix Rubber Stamp)"
+                  />
+                </div>
               </div>
               {/* Date / Contact row */}
               <div className="grid grid-cols-2">

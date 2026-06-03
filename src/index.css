@@ -46,20 +46,23 @@ body {
   /* Each page section fills exactly one A4-landscape page */
   .printable section {
     width: 281mm !important;
-    min-height: 194mm !important; /* 210mm − 2×8mm */
     border-radius: 0 !important;
     box-shadow: none !important;
     overflow: visible !important;
     margin: 0 !important;
     padding: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
   }
 
   /* Show hidden (paginated) sections when printing */
   .printable section.hidden {
-    display: flex !important;
+    display: block !important;
     visibility: visible !important;
+  }
+
+  /* Keep footer together — never split across pages */
+  .printable .nominal-footer {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 
   /* Remove min-width so table fills the full page width */

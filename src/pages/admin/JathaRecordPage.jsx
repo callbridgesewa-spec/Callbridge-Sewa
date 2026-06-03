@@ -96,7 +96,7 @@ function JathaRecordPage() {
       {/* Jatha filters */}
       <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
         <div className="flex flex-wrap items-end gap-3">
-          <div className="flex-1 min-w-[160px]">
+          <div className="w-full sm:flex-1 sm:min-w-[140px]">
             <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
               Department
             </label>
@@ -106,7 +106,7 @@ function JathaRecordPage() {
               className="w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm"
             />
           </div>
-          <div className="flex-1 min-w-[160px]">
+          <div className="w-full sm:flex-1 sm:min-w-[140px]">
             <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
               Area
             </label>
@@ -116,7 +116,7 @@ function JathaRecordPage() {
               className="w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm"
             />
           </div>
-          <div className="flex-1 min-w-[130px]">
+          <div className="w-full sm:flex-1 sm:min-w-[120px]">
             <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
               Date From
             </label>
@@ -127,7 +127,7 @@ function JathaRecordPage() {
               className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm"
             />
           </div>
-          <div className="flex-1 min-w-[130px]">
+          <div className="w-full sm:flex-1 sm:min-w-[120px]">
             <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
               Date To
             </label>

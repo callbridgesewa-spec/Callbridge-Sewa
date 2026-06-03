@@ -200,6 +200,7 @@ export function useVisitDataPage(isAdmin = false) {
     openEdit,
     handleSaveEdit,
     handleConfirmDelete,
+    reload: loadData,
     EMPTY_FORM,
   };
 }

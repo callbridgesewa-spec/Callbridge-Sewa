@@ -2225,20 +2225,24 @@ function ProspectsDetailsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => openCallLogForProspect(p)}
-                        className="rounded bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-200"
-                      >
-                        View Form
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openEditCallLogForProspect(p)}
-                        className="rounded bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-200"
-                      >
-                        Edit Form
-                      </button>
+                      {prospectsWithCallLog.has(p.id) && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => openCallLogForProspect(p)}
+                            className="rounded bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-200"
+                          >
+                            View Form
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openEditCallLogForProspect(p)}
+                            className="rounded bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-200"
+                          >
+                            Edit Form
+                          </button>
+                        </>
+                      )}
                       <button
                         type="button"
                         onClick={() => openDeleteConfirm(p.id)}

@@ -133,6 +133,10 @@ export function docToDisplay(doc) {
       getAttr(doc, "NamdaanInitiationPlace", "initiationPlace") ||
       getAttrByKeyMatch(doc, "NamdaanInitiationPlace", "initiationPlace") ||
       "-",
+    visitName:     getAttr(doc, "visitName")     || "",
+    assignDuty:    getAttr(doc, "assignDuty")    || "",
+    visitDept:     getAttr(doc, "departmentName") || "",
+    inchargeName:  getAttr(doc, "inchargeName")  || "",
   };
 }
 
