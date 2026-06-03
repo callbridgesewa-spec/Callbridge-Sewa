@@ -190,7 +190,6 @@ function exportProspectsWorkbook(prospectDocs, callLogDocs) {
 
   const headers = [
     ...TEMPLATE_COLUMNS.map((c) => c.header),
-    ...VISIT_EXPORT_FIELDS.map(([, h]) => h),
     ...CALL_LOG_EXPORT_FIELDS.map(([, h]) => h),
   ];
 
@@ -203,10 +202,6 @@ function exportProspectsWorkbook(prospectDocs, callLogDocs) {
         : excelCellValue(doc[field])
     );
 
-    const visitCells = VISIT_EXPORT_FIELDS.map(([field]) =>
-      excelCellValue(doc[field])
-    );
-
     const logCells = CALL_LOG_EXPORT_FIELDS.map(([field]) => {
       if (!log) return "";
       return field === "jathaDetails"
@@ -214,7 +209,7 @@ function exportProspectsWorkbook(prospectDocs, callLogDocs) {
         : excelCellValue(log[field]);
     });
 
-    return [...prospectCells, ...visitCells, ...logCells];
+    return [...prospectCells, ...logCells];
   });
 
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);

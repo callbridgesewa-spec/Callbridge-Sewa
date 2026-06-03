@@ -1,3 +1,4 @@
+import * as XLSX from "xlsx";
 import { useVisitDataPage } from "../hooks/useVisitDataPage";
 import { ActionMenu } from "../components/ActionMenu";
 import { ProspectInfo } from "../components/ProspectInfo";
@@ -23,6 +24,19 @@ function VisitDataPage() {
     filteredEntries,
   } = useVisitDataPage(false);
 
+  const handleExport = () => {
+    const headers = ["Name", "Badge ID", "Phone", "Address", "Submitted By", "Date"];
+    const rows = filteredEntries.map(({ prospect, log }) => [
+      prospect.name, prospect.badgeId, prospect.phoneNumber, prospect.address,
+      log.submittedBy, log.$createdAt ? new Date(log.$createdAt).toLocaleDateString() : "",
+    ]);
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws["!cols"] = [22, 12, 14, 28, 24, 12].map((w) => ({ wch: w }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Visit Data");
+    XLSX.writeFile(wb, `visit_data_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
   return (
     <div className="flex flex-col space-y-4">
       <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -33,7 +47,7 @@ function VisitDataPage() {
             submitted calling forms
           </p>
         </div>
-        <div className="mt-2 sm:mt-0">
+        <div className="mt-2 flex items-center gap-2 sm:mt-0">
           <div className="relative w-full sm:w-64">
             <input
               type="text"
@@ -56,6 +70,14 @@ function VisitDataPage() {
               />
             </svg>
           </div>
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={filteredEntries.length === 0}
+            className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+          >
+            Export
+          </button>
         </div>
       </header>
 

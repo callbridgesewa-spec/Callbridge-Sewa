@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import * as XLSX from "xlsx";
 import {
   loadNominalRollMeta,
   saveNominalRollMeta,
@@ -168,6 +169,40 @@ function NominalRollSheet({ entries = [], title = "Nominal Roll Sewa Jatha" }) {
   const setMetaField = (field) => (e) =>
     setMeta((m) => ({ ...m, [field]: e.target.value }));
 
+  const handleExportExcel = () => {
+    const headers = [
+      "SR. NO.",
+      "Name of Sewadar / Sewadarni",
+      "Father's / Husband's Name",
+      "M / F",
+      "Age",
+      "Aadhar No.",
+      "R/o Village / Town / Locality / District",
+      "Mobile No.",
+      "Badge ID",
+    ];
+
+    const dataRows = rows.map((r) => [
+      r.srNo,
+      r.name,
+      r.guardian,
+      r.gender,
+      r.age,
+      r.aadhar,
+      r.locality,
+      r.mobile,
+      r.badgeId,
+    ]);
+
+    const metaRows = [headers, ...dataRows];
+
+    const ws = XLSX.utils.aoa_to_sheet(metaRows);
+    ws["!cols"] = [6, 28, 24, 6, 6, 18, 28, 16, 14].map((w) => ({ wch: w }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Nominal Roll");
+    XLSX.writeFile(wb, `nominal_roll_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
   return (
     <div
       className="space-y-4 printable"
@@ -199,6 +234,14 @@ function NominalRollSheet({ entries = [], title = "Nominal Roll Sewa Jatha" }) {
             className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
           >
             Remove last
+          </button>
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            disabled={rows.length === 0}
+            className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+          >
+            Export Excel
           </button>
           <button
             type="button"
