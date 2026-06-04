@@ -4,11 +4,11 @@ import { fetchBadgeCounts, saveBadgeCounts, saveRemarks } from '../services/badg
 import { createUser, listUsers, deleteUser } from '../services/usersService'
 
 const BADGE_SERIES = [
-  { key: 'open', label: 'Open', color: '#f97316', colorClass: 'bg-orange-500', value: 0 },
-  { key: 'permanent', label: 'Permanent', colorClass: 'bg-teal-500', color: '#14b8a6', value: 0 },
-  { key: 'elderly', label: 'Elderly', colorClass: 'bg-slate-700', color: '#334155', value: 0 },
-  { key: 'sangat', label: 'Sangat', colorClass: 'bg-amber-500', color: '#f59e0b', value: 0 },
-  { key: 'newProspects', label: 'New Prospects', colorClass: 'bg-orange-400', color: '#fb923c', value: 0 },
+  { key: 'open',         label: 'Open',             color: '#3b82f6', colorClass: 'bg-blue-500',   value: 0 },
+  { key: 'permanent',    label: 'Permanent',         color: '#8B1A2E', colorClass: 'bg-[#8B1A2E]', value: 0 },
+  { key: 'elderly',      label: 'Elderly',           color: '#22c55e', colorClass: 'bg-green-500',  value: 0 },
+  { key: 'sangat',       label: 'Sangat',            color: '#f97316', colorClass: 'bg-orange-500', value: 0 },
+  { key: 'newProspects', label: 'Open New Sewadar',  color: '#eab308', colorClass: 'bg-yellow-500', value: 0 },
 ]
 
 function BadgePieChart({ counts }) {

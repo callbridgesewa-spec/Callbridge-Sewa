@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import {
   loadNominalRollMeta,
   saveNominalRollMeta,
@@ -111,6 +111,7 @@ function NominalRollSheet({ entries = [], title = "Nominal Roll Sewa Jatha" }) {
   const safePages = pages.length ? pages : [[]];
   const totalRows = rows.length;
   const [currentPage, setCurrentPage] = useState(0);
+  const [exporting, setExporting] = useState(false);
 
   // Clamp currentPage to valid range during render instead of in an effect
   const maxPage = Math.max(0, safePages.length - 1);
@@ -169,38 +170,210 @@ function NominalRollSheet({ entries = [], title = "Nominal Roll Sewa Jatha" }) {
   const setMetaField = (field) => (e) =>
     setMeta((m) => ({ ...m, [field]: e.target.value }));
 
-  const handleExportExcel = () => {
-    const headers = [
-      "SR. NO.",
-      "Name of Sewadar / Sewadarni",
-      "Father's / Husband's Name",
-      "M / F",
-      "Age",
-      "Aadhar No.",
-      "R/o Village / Town / Locality / District",
-      "Mobile No.",
-      "Badge ID",
+  const handleExportExcel = async () => {
+    setExporting(true);
+    try {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Nominal Roll");
+
+    // ── Column widths (A = left margin gap, B-J = content) ───────────────────
+    ws.columns = [
+      { width: 2  }, // A – left margin (empty)
+      { width: 8  }, // B – SR. No.
+      { width: 24 }, // C – Name
+      { width: 22 }, // D – Father's Name
+      { width: 7  }, // E – M/F
+      { width: 7  }, // F – Age
+      { width: 18 }, // G – Aadhar
+      { width: 30 }, // H – Locality
+      { width: 15 }, // I – Mobile
+      { width: 14 }, // J – Badge ID
     ];
 
-    const dataRows = rows.map((r) => [
-      r.srNo,
-      r.name,
-      r.guardian,
-      r.gender,
-      r.age,
-      r.aadhar,
-      r.locality,
-      r.mobile,
-      r.badgeId,
-    ]);
+    // ── Shared style helpers ──────────────────────────────────────────────────
+    const thin   = { style: "thin",   color: { argb: "FF000000" } };
+    const medium = { style: "medium", color: { argb: "FF000000" } };
+    const allBorders  = { top: thin, left: thin, bottom: thin, right: thin };
+    const boldFont    = (size = 10) => ({ name: "Arial", size, bold: true });
+    const normFont    = (size = 10) => ({ name: "Arial", size });
+    const center      = { horizontal: "center", vertical: "middle", wrapText: true };
+    const leftAlign   = { horizontal: "left",   vertical: "middle", wrapText: true };
 
-    const metaRows = [headers, ...dataRows];
+    const sc = (cell, { value, font, fill, alignment, border } = {}) => {
+      if (value !== undefined) cell.value = value;
+      if (font)      cell.font      = font;
+      if (fill)      cell.fill      = fill;
+      if (alignment) cell.alignment = alignment;
+      if (border)    cell.border    = border;
+    };
 
-    const ws = XLSX.utils.aoa_to_sheet(metaRows);
-    ws["!cols"] = [6, 28, 24, 6, 6, 18, 28, 16, 14].map((w) => ({ wch: w }));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Nominal Roll");
-    XLSX.writeFile(wb, `nominal_roll_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    const headerFill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9D9D9" } };
+    const whiteFill  = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+
+    // ── Row 2: top spacer ────────────────────────────────────────────────────
+    ws.getRow(2).height = 8;
+
+    // ── Row 3: SATSANG CENTRES IN INDIA ──────────────────────────────────────
+    ws.mergeCells("B3:J3");
+    sc(ws.getCell("B3"), {
+      value: "SATSANG CENTRES IN INDIA",
+      font: boldFont(13), alignment: center,
+      border: { bottom: thin },
+    });
+    ws.getRow(3).height = 22;
+
+    // ── Row 4: NOMINAL ROLL SEWA JATHA ───────────────────────────────────────
+    ws.mergeCells("B4:J4");
+    sc(ws.getCell("B4"), {
+      value: "NOMINAL ROLL SEWA JATHA",
+      font: boldFont(11), alignment: center,
+      border: { bottom: thin },
+    });
+    ws.getRow(4).height = 18;
+
+    // ── Row 5: blank spacer ──────────────────────────────────────────────────
+    ws.mergeCells("B5:J5");
+    ws.getRow(5).height = 6;
+
+    // ── Rows 7-10: meta block (B:C label | D:G value | H label | I:J value) ──
+    const metaDefs = [
+      ["Name of Satsang Place:", meta.satsangPlace || "", `Area :  ${meta.area || ""}`, `ZONE : ${meta.zone || ""}`],
+      ["Name of Jathedar:",      meta.jathedar    || "", `Name of Driver: ${meta.driverName || ""}`, null],
+      ["Type of Vehicle:",       meta.vehicleType || "", `Vehicle No. : ${meta.vehicleNo || ""}`,    null],
+      ["Place of Sewa:",         meta.placeOfSewa || "", `FROM :   ${meta.from || ""}`, `TO :   ${meta.to || ""}`],
+    ];
+
+    metaDefs.forEach(([lbl, val, right, rightFar], i) => {
+      const r = 7 + i;
+      ws.mergeCells(`B${r}:C${r}`);
+      ws.mergeCells(`D${r}:G${r}`);
+      if (rightFar) {
+        ws.mergeCells(`I${r}:J${r}`);
+      } else {
+        ws.mergeCells(`H${r}:J${r}`);
+      }
+      sc(ws.getCell(`B${r}`), { value: lbl,    font: boldFont(9), alignment: leftAlign, border: allBorders, fill: whiteFill });
+      sc(ws.getCell(`D${r}`), { value: val,    font: normFont(9), alignment: leftAlign, border: allBorders, fill: whiteFill });
+      sc(ws.getCell(`H${r}`), { value: right,  font: normFont(9), alignment: leftAlign, border: allBorders, fill: whiteFill });
+      if (rightFar) {
+        sc(ws.getCell(`I${r}`), { value: rightFar, font: normFont(9), alignment: leftAlign, border: allBorders, fill: whiteFill });
+      }
+      ws.getRow(r).height = 16;
+    });
+
+    // Row 11: mention note
+    ws.mergeCells("B11:G11");
+    ws.mergeCells("H11:J11");
+    sc(ws.getCell("B11"), {
+      value: "(Mention Beas Department or Centre As applicable)",
+      font: { name: "Arial", size: 8, italic: true },
+      alignment: center, border: allBorders,
+    });
+    sc(ws.getCell("H11"), { value: "", border: allBorders });
+    ws.getRow(11).height = 14;
+
+    // ── Row 12: column headers ────────────────────────────────────────────────
+    const colHeaders = [
+      "SR. No.", "Name of Sewadar / Sewadarni", "Father's / Husband's Name",
+      "M / F", "Age", "Aadhar No.",
+      "R/o Village / Town / Locality / District", "Mobile No.", "BADGE ID",
+    ];
+    const hRow = ws.getRow(12);
+    hRow.height = 36;
+    colHeaders.forEach((h, i) => {
+      sc(hRow.getCell(i + 2), {  // +2: col 1 is margin A, data starts at col 2 (B)
+        value: h, font: boldFont(9), fill: headerFill, alignment: center, border: allBorders,
+      });
+    });
+
+    // ── Rows 13+: data ────────────────────────────────────────────────────────
+    rows.forEach((r, i) => {
+      const dRow = ws.getRow(13 + i);
+      dRow.height = 22;
+      [r.srNo ?? i + 1, r.name, r.guardian, r.gender, r.age, r.aadhar, r.locality, r.mobile, r.badgeId]
+        .forEach((v, ci) => {
+          sc(dRow.getCell(ci + 2), {  // +2: skip margin column A
+            value: v ?? "",
+            font: normFont(9),
+            alignment: ci === 0 || ci === 3 || ci === 4 ? center : leftAlign,
+            border: allBorders,
+          });
+        });
+    });
+
+    // ── Footer ────────────────────────────────────────────────────────────────
+    const lastData = 12 + rows.length;
+    const sigR     = lastData + 4;   // signing line row
+    const stampR   = sigR + 1;
+    const dateR    = stampR + 1;
+    const contactR = dateR + 1;
+
+    // Blank rows for signing space
+    for (let rn = lastData + 1; rn <= sigR; rn++) ws.getRow(rn).height = 18;
+
+    // Signature underlines
+    ws.mergeCells(`B${sigR}:E${sigR}`);
+    ws.mergeCells(`G${sigR}:J${sigR}`);
+    sc(ws.getCell(`B${sigR}`), { border: { bottom: thin } });
+    sc(ws.getCell(`G${sigR}`), { border: { bottom: thin } });
+
+    // Signature labels
+    ws.mergeCells(`B${stampR}:E${stampR}`);
+    ws.mergeCells(`G${stampR}:J${stampR}`);
+    sc(ws.getCell(`B${stampR}`), { value: "(Signature of Jathedar)",                     font: boldFont(9), alignment: center });
+    sc(ws.getCell(`G${stampR}`), { value: "(Signature of Functionary)\n(Affix Rubber Stamp)", font: boldFont(9), alignment: center });
+    ws.getRow(stampR).height = 28;
+
+    // Date row
+    ws.mergeCells(`B${dateR}:E${dateR}`);
+    ws.mergeCells(`G${dateR}:J${dateR}`);
+    sc(ws.getCell(`B${dateR}`), { value: `Date :   ${meta.leftDate  || ""}`, font: normFont(9), alignment: leftAlign, border: { bottom: thin } });
+    sc(ws.getCell(`G${dateR}`), { value: `Date :   ${meta.rightDate || ""}`, font: normFont(9), alignment: leftAlign, border: { bottom: thin } });
+    ws.getRow(dateR).height = 16;
+
+    // Contact row
+    ws.mergeCells(`B${contactR}:E${contactR}`);
+    ws.mergeCells(`G${contactR}:J${contactR}`);
+    sc(ws.getCell(`B${contactR}`), { value: `Contact No. :   ${meta.leftContact  || ""}`, font: normFont(9), alignment: leftAlign, border: { bottom: thin } });
+    sc(ws.getCell(`G${contactR}`), { value: `Contact No. :   ${meta.rightContact || ""}`, font: normFont(9), alignment: leftAlign, border: { bottom: thin } });
+    ws.getRow(contactR).height = 16;
+
+    // ── Outer border box (B3 → J:contactR) ───────────────────────────────────
+    const boxTop = 3;
+    const boxBot = contactR;
+    for (let r = boxTop; r <= boxBot; r++) {
+      const leftCell  = ws.getCell(r, 2);   // col B
+      const rightCell = ws.getCell(r, 10);  // col J
+      leftCell.border  = { ...leftCell.border,  left:   medium };
+      rightCell.border = { ...rightCell.border, right:  medium };
+      if (r === boxTop) {
+        for (let c = 2; c <= 10; c++) {
+          const cell = ws.getCell(r, c);
+          cell.border = { ...cell.border, top: medium };
+        }
+      }
+      if (r === boxBot) {
+        for (let c = 2; c <= 10; c++) {
+          const cell = ws.getCell(r, c);
+          cell.border = { ...cell.border, bottom: medium };
+        }
+      }
+    }
+
+    // ── Download ──────────────────────────────────────────────────────────────
+    const buf  = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = `nominal_roll_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export failed", err);
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -238,10 +411,10 @@ function NominalRollSheet({ entries = [], title = "Nominal Roll Sewa Jatha" }) {
           <button
             type="button"
             onClick={handleExportExcel}
-            disabled={rows.length === 0}
+            disabled={rows.length === 0 || exporting}
             className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
           >
-            Export Excel
+            {exporting ? "Exporting…" : "Export Excel"}
           </button>
           <button
             type="button"
@@ -401,7 +574,7 @@ function NominalRollSheet({ entries = [], title = "Nominal Roll Sewa Jatha" }) {
           </div>
 
           {/* ── Inner scroll wrapper — desktop + print only ── */}
-          <div className="hidden md:block print:block min-w-[960px] text-[10px] text-slate-900 sm:min-w-[1000px] sm:text-[11px] print:min-w-0 print:w-full print:text-[10px]">
+          <div className="hidden md:block print:block min-w-[960px] text-[10px] text-slate-900 sm:min-w-[1000px] sm:text-[11px] print:min-w-0 print:w-full print:text-[10px] print:border-4 print:border-slate-900" style={{ paddingLeft: '0.5cm' }}>
 
             {/* ══ HEADER — first page only ══ */}
             {idx === 0 && (
