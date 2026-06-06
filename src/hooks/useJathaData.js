@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../services/AuthContext";
 import {
   listProspectsAssignedTo,
-  listProspects,
+  listAllProspects,
   docToDisplay,
 } from "../services/prospectsService";
 import {
@@ -65,7 +65,7 @@ export function useJathaData(isAdmin = false) {
     setError("");
     try {
       const prospectRes = isAdmin
-        ? await listProspects()
+        ? { documents: await listAllProspects() }
         : await listProspectsAssignedTo(user.email);
 
       const callLogsRes = await listCallLogsForJathaRecord();

@@ -6,6 +6,7 @@ import ProspectsDetailsPage from './pages/admin/ProspectsDetailsPage'
 import AdminNominalRollPage from './pages/admin/NominalRollPage'
 import VisitDataPage from './pages/admin/VisitDataPage'
 import JathaRecordPage from './pages/admin/JathaRecordPage'
+import AttendancePage from './pages/admin/AttendancePage'
 import UserLayout from './pages/UserLayout'
 import Dashboard from './pages/Dashboard'
 import UserDashboard from './pages/UserDashboard'
@@ -33,6 +34,7 @@ function App() {
           <Route path="nominal-roll" element={<AdminNominalRollPage />} />
           <Route path="jatha-record" element={<JathaRecordPage />} />
           <Route path="visit-data" element={<VisitDataPage />} />
+          <Route path="attendance" element={<AttendancePage />} />
           <Route path="add-prospects" element={<UnderConstruction section="Add Prospects" />} />
         </Route>
 

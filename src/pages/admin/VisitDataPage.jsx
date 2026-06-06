@@ -4,6 +4,7 @@ import { useVisitDataPage } from "../../hooks/useVisitDataPage";
 import { ActionMenu } from "../../components/ActionMenu";
 import { ProspectInfo } from "../../components/ProspectInfo";
 import { JathaDepartmentSelect } from "../../components/JathaDepartmentSelect";
+import { VisitOptionSelect } from "../../components/VisitOptionSelect";
 import { updateProspect } from "../../services/prospectsService";
 
 const EMPTY_VISIT_FORM = {
@@ -11,6 +12,7 @@ const EMPTY_VISIT_FORM = {
   assignDuty: "",
   departmentName: "",
   inchargeName: "",
+  fatherHusbandName: "",
 };
 
 function toTelHref(phone) {
@@ -53,14 +55,14 @@ function VisitDataPage() {
   const [visitSuccess, setVisitSuccess] = useState("");
 
   const handleExport = () => {
-    const headers = ["Name", "Badge ID", "Phone", "Address", "Visit Name", "Assign Duty", "Visit Dept", "Incharge", "Submitted By", "Date"];
+    const headers = ["Name", "Father/Husband Name", "Badge ID", "Phone", "Address", "Visit Name", "Assign Duty", "Visit Dept", "Incharge", "Submitted By", "Date"];
     const rows = filteredEntries.map(({ prospect, log }) => [
-      prospect.name, prospect.badgeId, prospect.phoneNumber, prospect.address,
+      prospect.name, prospect.fatherHusbandName, prospect.badgeId, prospect.phoneNumber, prospect.address,
       prospect.visitName || "", prospect.assignDuty || "", prospect.visitDept || "", prospect.inchargeName || "",
       log.submittedBy, log.$createdAt ? new Date(log.$createdAt).toLocaleDateString() : "",
     ]);
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    ws["!cols"] = [22, 12, 14, 28, 18, 18, 14, 16, 24, 12].map((w) => ({ wch: w }));
+    ws["!cols"] = [22, 22, 12, 14, 28, 18, 18, 14, 16, 24, 12].map((w) => ({ wch: w }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Visit Data");
     XLSX.writeFile(wb, `visit_data_${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -73,6 +75,9 @@ function VisitDataPage() {
       assignDuty:     entry.prospect.assignDuty   || "",
       departmentName: entry.prospect.visitDept    || "",
       inchargeName:   entry.prospect.inchargeName || "",
+      fatherHusbandName: entry.prospect.fatherHusbandName === "-"
+        ? ""
+        : entry.prospect.fatherHusbandName || "",
     });
     setVisitError("");
     setVisitSuccess("");
@@ -90,6 +95,7 @@ function VisitDataPage() {
         assignDuty: visitForm.assignDuty,
         departmentName: visitForm.departmentName,
         inchargeName: visitForm.inchargeName,
+        fatherHusbandName: visitForm.fatherHusbandName,
       });
       setVisitSuccess("Visit details saved successfully.");
       await reload();
@@ -180,6 +186,9 @@ function VisitDataPage() {
                       <p className="font-medium text-slate-900">
                         {prospect.name || "-"}
                       </p>
+                      <p className="mt-0.5 truncate text-xs text-slate-500">
+                        Father/Husband: {prospect.fatherHusbandName || "-"}
+                      </p>
                       <p className="mt-0.5 truncate text-xs text-slate-600">
                         {prospect.address || "-"}
                       </p>
@@ -228,6 +237,7 @@ function VisitDataPage() {
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
                     <th className="px-4 py-3 font-semibold text-slate-700">Name</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">Father/Husband</th>
                     <th className="px-4 py-3 font-semibold text-slate-700">Badge ID</th>
                     <th className="px-4 py-3 font-semibold text-slate-700">Phone</th>
                     <th className="px-4 py-3 font-semibold text-slate-700">Visit Name</th>
@@ -247,6 +257,7 @@ function VisitDataPage() {
                         className="border-b border-slate-100 hover:bg-slate-50/50"
                       >
                         <td className="px-4 py-3 font-medium text-slate-900">{prospect.name || "-"}</td>
+                        <td className="px-4 py-3 text-slate-600">{prospect.fatherHusbandName || "-"}</td>
                         <td className="px-4 py-3 text-slate-600">{prospect.badgeId || "-"}</td>
                         <td className="px-4 py-3 text-slate-600">
                           {toTelHref(prospect.phoneNumber) ? (
@@ -344,6 +355,7 @@ function VisitDataPage() {
                   <div className="grid grid-cols-2 gap-2 rounded-lg border border-sky-200 bg-sky-50 p-3">
                     {[
                       ["Visit Name",   viewEntry.prospect.visitName],
+                      ["Father/Husband Name", viewEntry.prospect.fatherHusbandName],
                       ["Assign Duty",  viewEntry.prospect.assignDuty],
                       ["Department",   viewEntry.prospect.visitDept],
                       ["Incharge",     viewEntry.prospect.inchargeName],
@@ -729,11 +741,21 @@ function VisitDataPage() {
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Visit Name
                 </label>
-                <input
-                  type="text"
+                <VisitOptionSelect
                   value={visitForm.visitName}
                   onChange={(e) => setVisitForm((f) => ({ ...f, visitName: e.target.value }))}
-                  placeholder="e.g. Beas Sewa Jatha 2025"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Father/Husband Name
+                </label>
+                <input
+                  type="text"
+                  value={visitForm.fatherHusbandName}
+                  onChange={(e) => setVisitForm((f) => ({ ...f, fatherHusbandName: e.target.value }))}
+                  placeholder="Enter father or husband name"
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                 />
               </div>

@@ -2,6 +2,7 @@ import { databases, APPWRITE_CONFIG } from './appwriteClient'
 import {
   DEFAULT_AREAS,
   DEFAULT_DEPARTMENTS,
+  DEFAULT_VISIT_OPTIONS,
   dedupeSorted,
   parseListField,
   serializeListForDb,
@@ -18,6 +19,7 @@ const DEFAULT_BADGES = {
 /** Appwrite attribute keys on badge-counts collection */
 const ATTR_DEPARTMENTS = 'Departments'
 const ATTR_AREA = 'area'
+const ATTR_VISIT_OPTIONS = 'visitOptions'
 const ATTR_REMARKS = 'remarks'
 
 function parseRemark(doc) {
@@ -134,6 +136,7 @@ export async function fetchJathaLists() {
       return {
         departments: DEFAULT_DEPARTMENTS,
         areas: DEFAULT_AREAS,
+        visitOptions: DEFAULT_VISIT_OPTIONS,
         source: 'default',
         documentId: null,
       }
@@ -144,10 +147,14 @@ export async function fetchJathaLists() {
       DEFAULT_DEPARTMENTS
     const areas =
       parseListField(doc, [ATTR_AREA, 'areas', 'Area', 'Areas']) ?? DEFAULT_AREAS
+    const visitOptions =
+      parseListField(doc, [ATTR_VISIT_OPTIONS, 'VisitOptions', 'visit_options']) ??
+      DEFAULT_VISIT_OPTIONS
 
     return {
       departments,
       areas,
+      visitOptions,
       source: 'database',
       documentId: doc.$id,
     }
@@ -156,6 +163,7 @@ export async function fetchJathaLists() {
     return {
       departments: DEFAULT_DEPARTMENTS,
       areas: DEFAULT_AREAS,
+      visitOptions: DEFAULT_VISIT_OPTIONS,
       source: 'default',
       documentId: null,
     }
@@ -171,9 +179,11 @@ export async function saveJathaLists(lists) {
 
   const departments = dedupeSorted(lists.departments)
   const areas = dedupeSorted(lists.areas)
+  const visitOptions = dedupeSorted(lists.visitOptions)
   const payload = {
     [ATTR_DEPARTMENTS]: serializeListForDb(departments),
     [ATTR_AREA]: serializeListForDb(areas),
+    [ATTR_VISIT_OPTIONS]: serializeListForDb(visitOptions),
   }
 
   const doc = await getBadgeDocument()
@@ -183,7 +193,7 @@ export async function saveJathaLists(lists) {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(
         new CustomEvent('cb-jatha-lists-updated', {
-          detail: { departments, areas },
+          detail: { departments, areas, visitOptions },
         }),
       )
     }
@@ -199,7 +209,7 @@ export async function saveJathaLists(lists) {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(
       new CustomEvent('cb-jatha-lists-updated', {
-        detail: { departments, areas },
+        detail: { departments, areas, visitOptions },
       }),
     )
   }

@@ -101,6 +101,11 @@ export function docToDisplay(doc) {
       getAttr(doc, "guardian", "Guardian", "fatherHusbandName") ||
       getAttrByKeyMatch(doc, "guardian", "fatherHusbandName") ||
       "-",
+    fatherHusbandName:
+      getAttr(doc, "fatherHusbandName") ||
+      getAttrByKeyMatch(doc, "fatherHusbandName") ||
+      getAttr(doc, "guardian", "Guardian") ||
+      "-",
     emergencyContact:
       getAttr(doc, "emergencyContact", "EmergencyContact") ||
       getAttrByKeyMatch(doc, "emergencyContact") ||

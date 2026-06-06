@@ -8,6 +8,7 @@ const sidebarItems = [
   { label: 'Nominal Roll', to: '/admin/nominal-roll', icon: 'checklist' },
   { label: 'Jatha Record', to: '/admin/jatha-record', icon: 'folder' },
   { label: 'Visit Data', to: '/admin/visit-data', icon: 'clipboard' },
+  { label: 'Attendance', to: '/admin/attendance', icon: 'calendar' },
 ]
 
 function AdminLayout() {
@@ -71,7 +72,7 @@ function AdminLayout() {
                       onClick={() => { dashboardActions.openJathaListsModal(); setActionsMenuOpen(false) }}
                       className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                     >
-                      Jatha Lists
+                      Dropdown Options
                     </button>
                     <div className="my-1 border-t border-slate-100" />
                   </>
@@ -120,7 +121,7 @@ function AdminLayout() {
               onClick={dashboardActions.openJathaListsModal}
               className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
             >
-              Jatha Lists
+              Dropdown Options
             </button>
           </>
         )}

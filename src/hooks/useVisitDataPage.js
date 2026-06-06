@@ -120,6 +120,8 @@ export function useVisitDataPage(isAdmin = false) {
       prospect.badgeId,
       prospect.phoneNumber,
       prospect.address,
+      prospect.fatherHusbandName,
+      prospect.visitName,
       log.submittedBy,
       log.attendance,
     ];

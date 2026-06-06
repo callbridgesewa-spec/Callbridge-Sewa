@@ -18,10 +18,10 @@ export function JathaListsModal({ open, onClose }) {
         <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
           <div>
             <h2 id="jatha-lists-modal-title" className="text-lg font-semibold text-slate-900">
-              Jatha areas & departments
+              Dropdown options
             </h2>
             <p className="mt-0.5 text-xs text-slate-500">
-              Dropdown options for call forms (saved in badge-counts).
+              Manage area, department, and visit dropdown values.
             </p>
           </div>
           <button

@@ -240,12 +240,24 @@ export async function listCallLogsForJathaRecord() {
     return { documents: [], total: 0 };
   }
   try {
-    const response = await databases.listDocuments(
-      databaseId,
-      callLogsCollectionId,
-      [Query.orderDesc("$createdAt")],
-    );
-    const docs = response.documents || [];
+    const limit = 100;
+    const docs = [];
+    let offset = 0;
+    while (true) {
+      const response = await databases.listDocuments(
+        databaseId,
+        callLogsCollectionId,
+        [
+          Query.orderDesc("$createdAt"),
+          Query.limit(limit),
+          Query.offset(offset),
+        ],
+      );
+      const batch = response.documents || [];
+      docs.push(...batch);
+      if (batch.length < limit) break;
+      offset += limit;
+    }
     const filtered = docs.filter((d) => {
       const nominalYes =
         String(d.nominalListSelect || "")
@@ -336,7 +348,6 @@ export async function deleteCallLogsForProspect(prospectId) {
 export async function deleteCallLogsForProspects(prospectIds) {
   if (!Array.isArray(prospectIds) || prospectIds.length === 0) return;
   for (const id of prospectIds) {
-    // eslint-disable-next-line no-await-in-loop
     await deleteCallLogsForProspect(id);
   }
 }

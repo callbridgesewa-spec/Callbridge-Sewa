@@ -2,6 +2,7 @@
 export {
   DEFAULT_AREAS,
   DEFAULT_DEPARTMENTS,
+  DEFAULT_VISIT_OPTIONS,
   addToList,
   removeFromList,
 } from '../utils/jathaListUtils'

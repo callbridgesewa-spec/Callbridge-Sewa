@@ -133,6 +133,10 @@ export function JathaListsManager({ embedded = false }) {
     removeArea,
     resetDepartments,
     resetAreas,
+    visitOptions,
+    addVisitOption,
+    removeVisitOption,
+    resetVisitOptions,
   } = useJathaLists()
 
   const disabled = loading || saving
@@ -141,10 +145,9 @@ export function JathaListsManager({ embedded = false }) {
     <div className={embedded ? 'space-y-3' : 'space-y-3'}>
       {!embedded && (
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">Jatha area & department lists</h2>
+          <h2 className="text-sm font-semibold text-slate-900">Dropdown options</h2>
           <p className="mt-1 text-xs text-slate-500">
-            Stored in badge-counts (<code className="text-[10px]">area</code>,{' '}
-            <code className="text-[10px]">Departments</code>).
+            Stored in the badge-counts document.
           </p>
         </div>
       )}
@@ -174,6 +177,15 @@ export function JathaListsManager({ embedded = false }) {
           onAdd={addDepartment}
           onRemove={removeDepartment}
           onReset={resetDepartments}
+          disabled={disabled}
+        />
+        <ListEditor
+          title="Visit Options"
+          description="badge-counts / visitOptions"
+          items={visitOptions}
+          onAdd={addVisitOption}
+          onRemove={removeVisitOption}
+          onReset={resetVisitOptions}
           disabled={disabled}
         />
       </div>
