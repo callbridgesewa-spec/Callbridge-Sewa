@@ -158,13 +158,16 @@ function AttendancePage() {
 
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Attendance Register", {
-        views: [{ state: "frozen", xSplit: 3, ySplit: 1 }],
+        views: [{ state: "frozen", xSplit: 6, ySplit: 1 }],
       });
       worksheet.properties.defaultRowHeight = 22;
       worksheet.columns = [
         { header: "SR. No.", key: "serial", width: 9 },
         { header: "Name", key: "name", width: 24 },
         { header: "Badge ID", key: "badgeId", width: 14 },
+        { header: "Father/Husband Name", key: "fatherHusbandName", width: 22 },
+        { header: "Phone", key: "phoneNumber", width: 14 },
+        { header: "Address", key: "address", width: 28 },
         ...dates.map((date) => ({
           header: formatExcelDate(date),
           key: date,
@@ -191,7 +194,7 @@ function AttendancePage() {
         cell.fill = {
           type: "pattern",
           pattern: "solid",
-          fgColor: { argb: columnNumber <= 3 ? "FFD9EAD3" : "FFFFF2CC" },
+          fgColor: { argb: columnNumber <= 6 ? "FFD9EAD3" : "FFFFF2CC" },
         };
       });
 
@@ -200,6 +203,9 @@ function AttendancePage() {
           serial: index + 1,
           name: prospect.name || "-",
           badgeId: prospect.badgeId || "-",
+          fatherHusbandName: prospect.fatherHusbandName || "-",
+          phoneNumber: prospect.phoneNumber || "-",
+          address: prospect.address || "-",
         });
         row.height = 22;
 
@@ -214,7 +220,7 @@ function AttendancePage() {
             exportStatus = "ABSENT";
           }
 
-          const cell = row.getCell(dateIndex + 4);
+          const cell = row.getCell(dateIndex + 7);
           cell.value = exportStatus;
           if (exportStatus) {
             const style = statusStyles[exportStatus];
@@ -235,10 +241,10 @@ function AttendancePage() {
         row.eachCell({ includeEmpty: true }, (cell, columnNumber) => {
           cell.border = thinBorder;
           cell.alignment = {
-            horizontal: columnNumber === 2 ? "left" : "center",
+            horizontal: columnNumber === 1 ? "center" : columnNumber <= 6 ? "left" : "center",
             vertical: "middle",
           };
-          if (columnNumber <= 3 && !cell.font?.bold) {
+          if (columnNumber <= 6 && !cell.font?.bold) {
             cell.font = { name: "Arial", size: 10 };
           }
         });
@@ -246,7 +252,7 @@ function AttendancePage() {
 
       worksheet.autoFilter = {
         from: { row: 1, column: 1 },
-        to: { row: 1, column: dates.length + 3 },
+        to: { row: 1, column: dates.length + 6 },
       };
       const buffer = await workbook.xlsx.writeBuffer();
       downloadWorkbook(buffer, `attendance_register_${selectedDate}.xlsx`);

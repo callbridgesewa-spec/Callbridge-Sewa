@@ -137,6 +137,14 @@ export function JathaListsManager({ embedded = false }) {
     addVisitOption,
     removeVisitOption,
     resetVisitOptions,
+    assignDutyOptions,
+    addAssignDutyOption,
+    removeAssignDutyOption,
+    resetAssignDutyOptions,
+    inchargeOptions,
+    addInchargeOption,
+    removeInchargeOption,
+    resetInchargeOptions,
   } = useJathaLists()
 
   const disabled = loading || saving
@@ -186,6 +194,24 @@ export function JathaListsManager({ embedded = false }) {
           onAdd={addVisitOption}
           onRemove={removeVisitOption}
           onReset={resetVisitOptions}
+          disabled={disabled}
+        />
+        <ListEditor
+          title="Assign Duty Options"
+          description="badge-counts / assignDutyOptions"
+          items={assignDutyOptions}
+          onAdd={addAssignDutyOption}
+          onRemove={removeAssignDutyOption}
+          onReset={resetAssignDutyOptions}
+          disabled={disabled}
+        />
+        <ListEditor
+          title="Incharge Options"
+          description="badge-counts / inchargeOptions"
+          items={inchargeOptions}
+          onAdd={addInchargeOption}
+          onRemove={removeInchargeOption}
+          onReset={resetInchargeOptions}
           disabled={disabled}
         />
       </div>

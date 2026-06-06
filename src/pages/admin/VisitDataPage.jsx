@@ -5,6 +5,8 @@ import { ActionMenu } from "../../components/ActionMenu";
 import { ProspectInfo } from "../../components/ProspectInfo";
 import { JathaDepartmentSelect } from "../../components/JathaDepartmentSelect";
 import { VisitOptionSelect } from "../../components/VisitOptionSelect";
+import { AssignDutySelect } from "../../components/AssignDutySelect";
+import { InchargeSelect } from "../../components/InchargeSelect";
 import { updateProspect } from "../../services/prospectsService";
 
 const EMPTY_VISIT_FORM = {
@@ -763,11 +765,9 @@ function VisitDataPage() {
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Assign Duty
                 </label>
-                <input
-                  type="text"
+                <AssignDutySelect
                   value={visitForm.assignDuty}
                   onChange={(e) => setVisitForm((f) => ({ ...f, assignDuty: e.target.value }))}
-                  placeholder="e.g. Langar Duty"
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                 />
               </div>
@@ -785,11 +785,9 @@ function VisitDataPage() {
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Incharge Name
                 </label>
-                <input
-                  type="text"
+                <InchargeSelect
                   value={visitForm.inchargeName}
                   onChange={(e) => setVisitForm((f) => ({ ...f, inchargeName: e.target.value }))}
-                  placeholder="e.g. Ramesh Kumar"
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                 />
               </div>

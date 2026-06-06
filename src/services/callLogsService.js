@@ -260,14 +260,12 @@ export async function listCallLogsForJathaRecord() {
     }
     const filtered = docs.filter((d) => {
       const nominalYes =
-        String(d.nominalListSelect || "")
-          .trim()
-          .toLowerCase() === "yes";
+        String(d.nominalListSelect || "").trim().toLowerCase() === "yes";
       const visitYes =
-        String(d.visitSelect || "")
-          .trim()
-          .toLowerCase() === "yes";
-      return nominalYes || visitYes;
+        String(d.visitSelect || "").trim().toLowerCase() === "yes";
+      const jathaYes =
+        String(d.jathaRecord || "").trim().toLowerCase() === "yes";
+      return nominalYes || visitYes || jathaYes;
     });
     return { documents: filtered, total: filtered.length };
   } catch (error) {

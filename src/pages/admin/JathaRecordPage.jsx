@@ -1,9 +1,15 @@
+import { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { useJathaData } from "../../hooks/useJathaData";
 import { ActionMenu } from "../../components/ActionMenu";
 import { ProspectInfo } from "../../components/ProspectInfo";
 import { JathaDepartmentSelect } from "../../components/JathaDepartmentSelect";
 import { JathaAreaSelect } from "../../components/JathaAreaSelect";
+import {
+  computeVisitStats,
+  saveVisitStats,
+  fetchVisitStats,
+} from "../../services/visitStatsService";
 
 function toTelHref(phone) {
   const raw = String(phone || "").trim();
@@ -19,6 +25,7 @@ function JathaRecordPage() {
   const {
     loading,
     error,
+    entries,
     searchQuery,
     setSearchQuery,
     filterDept,
@@ -46,6 +53,47 @@ function JathaRecordPage() {
   } = useJathaData(true);
 
   const hasFilter = filterDept || filterArea || filterDateFrom || filterDateTo;
+
+  const [showStats, setShowStats] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsError, setStatsError] = useState("");
+  const [statsSuccess, setStatsSuccess] = useState("");
+  const [visitStats, setVisitStats] = useState([]);
+  const [statsLoaded, setStatsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!showStats || statsLoaded) return;
+    (async () => {
+      setStatsLoading(true);
+      setStatsError("");
+      try {
+        setVisitStats(await fetchVisitStats());
+        setStatsLoaded(true);
+      } catch (err) {
+        setStatsError(err.message || "Failed to load visit stats.");
+      } finally {
+        setStatsLoading(false);
+      }
+    })();
+  }, [showStats, statsLoaded]);
+
+  const handleComputeAndSave = async () => {
+    setStatsLoading(true);
+    setStatsError("");
+    setStatsSuccess("");
+    try {
+      const computed = computeVisitStats(entries);
+      await saveVisitStats(computed);
+      setVisitStats(computed);
+      setStatsLoaded(true);
+      setStatsSuccess(`Stats computed for ${computed.length} badge(s) and saved.`);
+    } catch (err) {
+      setStatsError(err.message || "Failed to compute or save stats.");
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
 
   const handleExport = () => {
     const headers = ["Name", "Badge ID", "Phone", "Address", "Nominal List", "Visit Select", "Attendance", "Jatha Record", "Jatha Details", "Submitted By", "Date"];
@@ -106,6 +154,13 @@ function JathaRecordPage() {
               />
             </svg>
           </div>
+          <button
+            type="button"
+            onClick={() => setShowStats((v) => !v)}
+            className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-medium shadow-sm transition ${showStats ? "border-sky-300 bg-sky-50 text-sky-700 hover:bg-sky-100" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}
+          >
+            Visit Stats
+          </button>
           <button
             type="button"
             onClick={handleExport}
@@ -178,6 +233,84 @@ function JathaRecordPage() {
           )}
         </div>
       </div>
+
+      {/* Visit Stats Panel */}
+      {showStats && (
+        <div className="rounded-lg bg-white p-4 shadow-sm">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">Visit Stats by Area</h2>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Jatha visit counts and percentages per center, grouped by badge ID
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleComputeAndSave}
+              disabled={statsLoading || entries.length === 0}
+              className="shrink-0 rounded-lg bg-sky-600 px-3 py-2 text-xs font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+            >
+              {statsLoading ? "Computing…" : "Recompute & Save"}
+            </button>
+          </div>
+
+          {statsError && (
+            <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {statsError}
+            </div>
+          )}
+          {statsSuccess && (
+            <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              {statsSuccess}
+            </div>
+          )}
+
+          {statsLoading && !visitStats.length ? (
+            <p className="py-6 text-center text-sm text-slate-500">Loading stats…</p>
+          ) : visitStats.length === 0 ? (
+            <p className="py-6 text-center text-sm text-slate-500">
+              No stats saved yet. Click &quot;Recompute &amp; Save&quot; to generate.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50">
+                    <th className="px-3 py-2 font-semibold text-slate-700">SR.</th>
+                    <th className="px-3 py-2 font-semibold text-slate-700">Badge ID</th>
+                    <th className="px-3 py-2 font-semibold text-slate-700">Name</th>
+                    <th className="px-3 py-2 font-semibold text-slate-700 text-center">Bhati</th>
+                    <th className="px-3 py-2 font-semibold text-slate-700 text-center">Beas</th>
+                    <th className="px-3 py-2 font-semibold text-slate-700 text-center whitespace-nowrap">Other Major Centres</th>
+                    <th className="px-3 py-2 font-semibold text-slate-700 text-center">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visitStats.map((stat, i) => (
+                    <tr key={stat.badgeId} className="border-b border-slate-100 hover:bg-slate-50/50">
+                      <td className="px-3 py-2 text-slate-500">{i + 1}</td>
+                      <td className="px-3 py-2 font-medium text-slate-900">{stat.badgeId}</td>
+                      <td className="px-3 py-2 text-slate-700 whitespace-nowrap">{stat.prospectName}</td>
+                      <td className="px-3 py-2 text-center text-slate-700">
+                        {stat.bhatiCount > 0 ? <>{stat.bhatiCount} <span className="text-slate-400">({stat.bhatiPercentage}%)</span></> : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-3 py-2 text-center text-slate-700">
+                        {stat.beasCount > 0 ? <>{stat.beasCount} <span className="text-slate-400">({stat.beasPercentage}%)</span></> : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-3 py-2 text-center text-slate-700">
+                        {stat.otherCount > 0 ? <>{stat.otherCount} <span className="text-slate-400">({stat.otherPercentage}%)</span></> : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-3 py-2 text-center font-semibold text-slate-800">
+                        {stat.totalVisits}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="overflow-visible rounded-lg bg-white p-4 shadow-sm flex flex-col flex-1">
         {error && (

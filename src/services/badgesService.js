@@ -3,6 +3,8 @@ import {
   DEFAULT_AREAS,
   DEFAULT_DEPARTMENTS,
   DEFAULT_VISIT_OPTIONS,
+  DEFAULT_ASSIGN_DUTY_OPTIONS,
+  DEFAULT_INCHARGE_OPTIONS,
   dedupeSorted,
   parseListField,
   serializeListForDb,
@@ -20,6 +22,8 @@ const DEFAULT_BADGES = {
 const ATTR_DEPARTMENTS = 'Departments'
 const ATTR_AREA = 'area'
 const ATTR_VISIT_OPTIONS = 'visitOptions'
+const ATTR_ASSIGN_DUTY_OPTIONS = 'assignDutyOptions'
+const ATTR_INCHARGE_OPTIONS = 'inchargeOptions'
 const ATTR_REMARKS = 'remarks'
 
 function parseRemark(doc) {
@@ -150,11 +154,19 @@ export async function fetchJathaLists() {
     const visitOptions =
       parseListField(doc, [ATTR_VISIT_OPTIONS, 'VisitOptions', 'visit_options']) ??
       DEFAULT_VISIT_OPTIONS
+    const assignDutyOptions =
+      parseListField(doc, [ATTR_ASSIGN_DUTY_OPTIONS, 'AssignDutyOptions', 'assign_duty_options']) ??
+      DEFAULT_ASSIGN_DUTY_OPTIONS
+    const inchargeOptions =
+      parseListField(doc, [ATTR_INCHARGE_OPTIONS, 'InchargeOptions', 'incharge_options']) ??
+      DEFAULT_INCHARGE_OPTIONS
 
     return {
       departments,
       areas,
       visitOptions,
+      assignDutyOptions,
+      inchargeOptions,
       source: 'database',
       documentId: doc.$id,
     }
@@ -164,6 +176,8 @@ export async function fetchJathaLists() {
       departments: DEFAULT_DEPARTMENTS,
       areas: DEFAULT_AREAS,
       visitOptions: DEFAULT_VISIT_OPTIONS,
+      assignDutyOptions: DEFAULT_ASSIGN_DUTY_OPTIONS,
+      inchargeOptions: DEFAULT_INCHARGE_OPTIONS,
       source: 'default',
       documentId: null,
     }
@@ -180,10 +194,14 @@ export async function saveJathaLists(lists) {
   const departments = dedupeSorted(lists.departments)
   const areas = dedupeSorted(lists.areas)
   const visitOptions = dedupeSorted(lists.visitOptions)
+  const assignDutyOptions = dedupeSorted(lists.assignDutyOptions)
+  const inchargeOptions = dedupeSorted(lists.inchargeOptions)
   const payload = {
     [ATTR_DEPARTMENTS]: serializeListForDb(departments),
     [ATTR_AREA]: serializeListForDb(areas),
     [ATTR_VISIT_OPTIONS]: serializeListForDb(visitOptions),
+    [ATTR_ASSIGN_DUTY_OPTIONS]: serializeListForDb(assignDutyOptions),
+    [ATTR_INCHARGE_OPTIONS]: serializeListForDb(inchargeOptions),
   }
 
   const doc = await getBadgeDocument()
@@ -193,7 +211,7 @@ export async function saveJathaLists(lists) {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(
         new CustomEvent('cb-jatha-lists-updated', {
-          detail: { departments, areas, visitOptions },
+          detail: { departments, areas, visitOptions, assignDutyOptions, inchargeOptions },
         }),
       )
     }
@@ -209,7 +227,7 @@ export async function saveJathaLists(lists) {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(
       new CustomEvent('cb-jatha-lists-updated', {
-        detail: { departments, areas, visitOptions },
+        detail: { departments, areas, visitOptions, assignDutyOptions, inchargeOptions },
       }),
     )
   }

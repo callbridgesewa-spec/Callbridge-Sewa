@@ -4,6 +4,8 @@ import defaultAreas from '../data/jathaAreas.json'
 export const DEFAULT_DEPARTMENTS = [...(defaultDepartments.departments ?? [])]
 export const DEFAULT_AREAS = [...(defaultAreas.areas ?? [])]
 export const DEFAULT_VISIT_OPTIONS = []
+export const DEFAULT_ASSIGN_DUTY_OPTIONS = []
+export const DEFAULT_INCHARGE_OPTIONS = []
 
 export function normalizeName(value) {
   return String(value ?? '').trim()
