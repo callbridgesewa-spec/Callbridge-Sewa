@@ -1,15 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import * as XLSX from "xlsx";
 import { useJathaData } from "../../hooks/useJathaData";
 import { ActionMenu } from "../../components/ActionMenu";
 import { ProspectInfo } from "../../components/ProspectInfo";
 import { JathaDepartmentSelect } from "../../components/JathaDepartmentSelect";
 import { JathaAreaSelect } from "../../components/JathaAreaSelect";
-import {
-  computeVisitStats,
-  saveVisitStats,
-  fetchVisitStats,
-} from "../../services/visitStatsService";
+import { computeVisitStats } from "../../services/visitStatsService";
 
 function toTelHref(phone) {
   const raw = String(phone || "").trim();
@@ -54,57 +50,110 @@ function JathaRecordPage() {
 
   const hasFilter = filterDept || filterArea || filterDateFrom || filterDateTo;
 
-  const [showStats, setShowStats] = useState(false);
-  const [statsLoading, setStatsLoading] = useState(false);
-  const [statsError, setStatsError] = useState("");
-  const [statsSuccess, setStatsSuccess] = useState("");
-  const [visitStats, setVisitStats] = useState([]);
-  const [statsLoaded, setStatsLoaded] = useState(false);
-
-  useEffect(() => {
-    if (!showStats || statsLoaded) return;
-    (async () => {
-      setStatsLoading(true);
-      setStatsError("");
-      try {
-        setVisitStats(await fetchVisitStats());
-        setStatsLoaded(true);
-      } catch (err) {
-        setStatsError(err.message || "Failed to load visit stats.");
-      } finally {
-        setStatsLoading(false);
-      }
-    })();
-  }, [showStats, statsLoaded]);
-
-  const handleComputeAndSave = async () => {
-    setStatsLoading(true);
-    setStatsError("");
-    setStatsSuccess("");
-    try {
-      const computed = computeVisitStats(entries);
-      await saveVisitStats(computed);
-      setVisitStats(computed);
-      setStatsLoaded(true);
-      setStatsSuccess(`Stats computed for ${computed.length} badge(s) and saved.`);
-    } catch (err) {
-      setStatsError(err.message || "Failed to compute or save stats.");
-    } finally {
-      setStatsLoading(false);
-    }
-  };
 
 
   const handleExport = () => {
-    const headers = ["Name", "Badge ID", "Phone", "Address", "Nominal List", "Visit Select", "Attendance", "Jatha Record", "Jatha Details", "Submitted By", "Date"];
-    const rows = filteredEntries.map(({ prospect, log }) => {
-      let jathas = [];
-      try { jathas = typeof log.jathaDetails === "string" ? JSON.parse(log.jathaDetails || "[]") : log.jathaDetails || []; } catch { jathas = []; }
-      const jathaStr = jathas.map((j, i) => `[${i+1}] Area:${j.areaName||"-"} Dept:${j.departmentName||"-"} Days:${j.jathaTotalDay||"-"} ${j.dateFrom||"-"} to ${j.dateTo||"-"}`).join(" | ");
-      return [prospect.name, prospect.badgeId, prospect.phoneNumber, prospect.address, log.nominalListSelect, log.visitSelect, log.attendance, log.jathaRecord, jathaStr, log.submittedBy, log.$createdAt ? new Date(log.$createdAt).toLocaleDateString() : ""];
+    const headers = [
+      "S.NO",
+      "Name OF SEWADAR / SEWADARNI",
+      "FATHER'S / HUSBAND'S NAME",
+      "GENDER",
+      "AGE",
+      "ADDHAR NO",
+      "Badge ID",
+      "Phone",
+      "BHATI ATTENDANCE COUNT",
+      "BHATI ATTENDANCE PERCENT",
+      "BEAS ATTENDANCE COUNT",
+      "BEAS ATTENDANCE PERCENT",
+      "OTHER MAJOR CENTER ATTENDANCE COUNT",
+      "OTHER MAJOR CENTER ATTENDANCE PERCENT",
+      "ATTENDANCE COUNT",
+      "ATTENDANCE PERCENT",
+      "Address",
+      "Nominal List",
+      "Visit Select",
+      "Attendance",
+      "Jatha Record",
+      "Jatha Details",
+      "Submitted By",
+      "Date",
+    ];
+
+    // Aggregate Bhati/Beas/Other visit counts per badge ID across all jatha entries.
+    const statsByBadgeId = new Map();
+    computeVisitStats(entries).forEach((s) => statsByBadgeId.set(s.badgeId, s));
+
+    const clean = (v) => (v == null || v === "-" ? "" : v);
+
+    // Group entries into one row per sewadar, keyed by badge ID
+    // (falling back to prospect ID when a badge is missing).
+    const groups = new Map();
+    filteredEntries.forEach(({ prospect, log }) => {
+      const badge = String(prospect.badgeId || "").trim();
+      const key = badge && badge !== "-" ? `badge:${badge}` : `id:${prospect.id || ""}`;
+      if (!groups.has(key)) groups.set(key, { prospect, logs: [] });
+      groups.get(key).logs.push(log);
     });
+
+    // "Yes" if any submission says Yes; else "No" if any says No; else blank.
+    const rollUpYesNo = (logs, field) => {
+      let sawNo = false;
+      for (const l of logs) {
+        const v = String(l[field] || "").trim().toLowerCase();
+        if (v === "yes") return "Yes";
+        if (v === "no") sawNo = true;
+      }
+      return sawNo ? "No" : "";
+    };
+
+    const rows = [...groups.values()].map(({ prospect, logs }, idx) => {
+      // Combine jatha details across all of this sewadar's submissions.
+      const allJathas = [];
+      logs.forEach((log) => {
+        let jathas = [];
+        try { jathas = typeof log.jathaDetails === "string" ? JSON.parse(log.jathaDetails || "[]") : log.jathaDetails || []; } catch { jathas = []; }
+        if (Array.isArray(jathas)) allJathas.push(...jathas);
+      });
+      const jathaStr = allJathas.map((j, i) => `[${i+1}] Area:${j.areaName||"-"} Dept:${j.departmentName||"-"} Days:${j.jathaTotalDay||"-"} ${j.dateFrom||"-"} to ${j.dateTo||"-"}`).join(" | ");
+
+      const submitters = [...new Set(logs.map((l) => String(l.submittedBy || "").trim()).filter(Boolean))].join(", ");
+      const latestTs = logs.reduce((max, l) => {
+        const t = l.$createdAt ? new Date(l.$createdAt).getTime() : 0;
+        return t > max ? t : max;
+      }, 0);
+
+      const stat = statsByBadgeId.get(String(prospect.badgeId || "").trim());
+      return [
+        idx + 1,
+        clean(prospect.name),
+        clean(prospect.fatherHusbandName),
+        clean(prospect.gender),
+        clean(prospect.age),
+        clean(prospect.aadhar),
+        clean(prospect.badgeId),
+        clean(prospect.phoneNumber),
+        stat ? stat.bhatiCount : "",
+        stat ? stat.bhatiPercentage : "",
+        stat ? stat.beasCount : "",
+        stat ? stat.beasPercentage : "",
+        stat ? stat.otherCount : "",
+        stat ? stat.otherPercentage : "",
+        stat ? stat.totalVisits : "",
+        stat ? 100 : "",
+        clean(prospect.address),
+        rollUpYesNo(logs, "nominalListSelect"),
+        rollUpYesNo(logs, "visitSelect"),
+        rollUpYesNo(logs, "attendance"),
+        rollUpYesNo(logs, "jathaRecord"),
+        jathaStr,
+        submitters,
+        latestTs ? new Date(latestTs).toLocaleDateString() : "",
+      ];
+    });
+
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    ws["!cols"] = [22, 12, 14, 22, 12, 12, 12, 12, 50, 24, 12].map((w) => ({ wch: w }));
+    ws["!cols"] = [6, 24, 24, 10, 8, 16, 12, 14, 14, 14, 14, 14, 18, 18, 14, 14, 22, 12, 12, 12, 12, 50, 24, 12].map((w) => ({ wch: w }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Jatha Record");
     XLSX.writeFile(wb, `jatha_record_${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -127,7 +176,7 @@ function JathaRecordPage() {
         <div>
           <h1 className="text-xl font-semibold text-slate-900">Jatha Record</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Prospects with Nominal List or Visit Select &quot;Yes&quot; —
+            Sewadars with Nominal List or Visit Select &quot;Yes&quot; —
             combined nominal and visit data with attendance
           </p>
         </div>
@@ -154,13 +203,6 @@ function JathaRecordPage() {
               />
             </svg>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowStats((v) => !v)}
-            className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-medium shadow-sm transition ${showStats ? "border-sky-300 bg-sky-50 text-sky-700 hover:bg-sky-100" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}
-          >
-            Visit Stats
-          </button>
           <button
             type="button"
             onClick={handleExport}
@@ -233,84 +275,6 @@ function JathaRecordPage() {
           )}
         </div>
       </div>
-
-      {/* Visit Stats Panel */}
-      {showStats && (
-        <div className="rounded-lg bg-white p-4 shadow-sm">
-          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-slate-900">Visit Stats by Area</h2>
-              <p className="mt-0.5 text-xs text-slate-500">
-                Jatha visit counts and percentages per center, grouped by badge ID
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleComputeAndSave}
-              disabled={statsLoading || entries.length === 0}
-              className="shrink-0 rounded-lg bg-sky-600 px-3 py-2 text-xs font-medium text-white hover:bg-sky-700 disabled:opacity-50"
-            >
-              {statsLoading ? "Computing…" : "Recompute & Save"}
-            </button>
-          </div>
-
-          {statsError && (
-            <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {statsError}
-            </div>
-          )}
-          {statsSuccess && (
-            <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-              {statsSuccess}
-            </div>
-          )}
-
-          {statsLoading && !visitStats.length ? (
-            <p className="py-6 text-center text-sm text-slate-500">Loading stats…</p>
-          ) : visitStats.length === 0 ? (
-            <p className="py-6 text-center text-sm text-slate-500">
-              No stats saved yet. Click &quot;Recompute &amp; Save&quot; to generate.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="px-3 py-2 font-semibold text-slate-700">SR.</th>
-                    <th className="px-3 py-2 font-semibold text-slate-700">Badge ID</th>
-                    <th className="px-3 py-2 font-semibold text-slate-700">Name</th>
-                    <th className="px-3 py-2 font-semibold text-slate-700 text-center">Bhati</th>
-                    <th className="px-3 py-2 font-semibold text-slate-700 text-center">Beas</th>
-                    <th className="px-3 py-2 font-semibold text-slate-700 text-center whitespace-nowrap">Other Major Centres</th>
-                    <th className="px-3 py-2 font-semibold text-slate-700 text-center">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visitStats.map((stat, i) => (
-                    <tr key={stat.badgeId} className="border-b border-slate-100 hover:bg-slate-50/50">
-                      <td className="px-3 py-2 text-slate-500">{i + 1}</td>
-                      <td className="px-3 py-2 font-medium text-slate-900">{stat.badgeId}</td>
-                      <td className="px-3 py-2 text-slate-700 whitespace-nowrap">{stat.prospectName}</td>
-                      <td className="px-3 py-2 text-center text-slate-700">
-                        {stat.bhatiCount > 0 ? <>{stat.bhatiCount} <span className="text-slate-400">({stat.bhatiPercentage}%)</span></> : <span className="text-slate-300">—</span>}
-                      </td>
-                      <td className="px-3 py-2 text-center text-slate-700">
-                        {stat.beasCount > 0 ? <>{stat.beasCount} <span className="text-slate-400">({stat.beasPercentage}%)</span></> : <span className="text-slate-300">—</span>}
-                      </td>
-                      <td className="px-3 py-2 text-center text-slate-700">
-                        {stat.otherCount > 0 ? <>{stat.otherCount} <span className="text-slate-400">({stat.otherPercentage}%)</span></> : <span className="text-slate-300">—</span>}
-                      </td>
-                      <td className="px-3 py-2 text-center font-semibold text-slate-800">
-                        {stat.totalVisits}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
 
       <div className="overflow-visible rounded-lg bg-white p-4 shadow-sm flex flex-col flex-1">
         {error && (

@@ -17,6 +17,7 @@ import {
   listCallLogs,
   listAllCallLogs,
   listCallLogsForProspect,
+  createCallLog,
   updateCallLog,
   deleteCallLogsForProspect,
   deleteCallLogsForProspects,
@@ -314,7 +315,7 @@ function ProspectsDetailsPage() {
       const display = (res.documents || []).map(docToDisplay);
       setProspects(display);
     } catch (err) {
-      setError(err.message || "Failed to load prospects.");
+      setError(err.message || "Failed to load sewadars.");
     } finally {
       setLoading(false);
     }
@@ -408,7 +409,7 @@ function ProspectsDetailsPage() {
 
   const handleAssign = async () => {
     if (selectedIds.size === 0) {
-      setError("Select at least one prospect.");
+      setError("Select at least one sewadar.");
       return;
     }
     if (assignToUser === "") {
@@ -427,7 +428,7 @@ function ProspectsDetailsPage() {
       setAssignToUser("");
       await loadProspects();
     } catch (err) {
-      setError(err.message || "Failed to assign/unassign prospects.");
+      setError(err.message || "Failed to assign/unassign sewadars.");
     } finally {
       setAssigning(false);
     }
@@ -436,7 +437,7 @@ function ProspectsDetailsPage() {
   const openDeleteConfirm = (id) => setDeleteConfirm({ type: "single", id });
   const openBulkDeleteConfirm = () => {
     if (selectedIds.size === 0) {
-      setError("Select at least one prospect to delete.");
+      setError("Select at least one sewadar to delete.");
       return;
     }
     setDeleteConfirm({ type: "bulk", count: selectedIds.size });
@@ -472,7 +473,7 @@ function ProspectsDetailsPage() {
       const res = await listCallLogsForProspect(prospect.id);
       const docs = res.documents || [];
       if (!docs.length) {
-        setError("No submitted calling form found for this prospect.");
+        setError("No submitted calling form found for this sewadar.");
         return;
       }
       setViewCallLog({ prospect, log: docs[0] });
@@ -485,35 +486,33 @@ function ProspectsDetailsPage() {
     try {
       const res = await listCallLogsForProspect(prospect.id);
       const docs = res.documents || [];
-      if (!docs.length) {
-        setError("No submitted calling form found for this prospect.");
-        return;
-      }
-      const log = docs[0];
+      const log = docs[0] || null;
       let jatha = [];
-      try {
-        jatha =
-          typeof log.jathaDetails === "string"
-            ? JSON.parse(log.jathaDetails || "[]")
-            : log.jathaDetails || [];
-      } catch {
-        jatha = [];
+      if (log) {
+        try {
+          jatha =
+            typeof log.jathaDetails === "string"
+              ? JSON.parse(log.jathaDetails || "[]")
+              : log.jathaDetails || [];
+        } catch {
+          jatha = [];
+        }
       }
       setEditCallLog({ prospect, log });
       setCallForm({
-        select: log.select || "",
-        callBack: log.callBack || "",
-        notInterest: log.notInterest || "",
-        departmentOfSewa: log.departmentOfSewa || "",
-        needToWork: log.needToWork || "",
-        notes1: log.notes1 || "",
-        notes2: log.notes2 || "",
-        notes3: log.notes3 || "",
-        nominalListSelect: log.nominalListSelect || "",
-        visitSelect: log.visitSelect || "",
-        freeSewa: log.freeSewa || "N/A",
-        attendance: log.attendance || "",
-        jathaRecord: log.jathaRecord || "",
+        select: log?.select || "",
+        callBack: log?.callBack || "",
+        notInterest: log?.notInterest || "",
+        departmentOfSewa: log?.departmentOfSewa || "",
+        needToWork: log?.needToWork || "",
+        notes1: log?.notes1 || "",
+        notes2: log?.notes2 || "",
+        notes3: log?.notes3 || "",
+        nominalListSelect: log?.nominalListSelect || "",
+        visitSelect: log?.visitSelect || "",
+        freeSewa: log?.freeSewa || "N/A",
+        attendance: log?.attendance || "",
+        jathaRecord: log?.jathaRecord || "",
         jathaDetails: Array.isArray(jatha) ? jatha : [],
       });
     } catch (err) {
@@ -545,7 +544,7 @@ function ProspectsDetailsPage() {
         setError(`Uploaded ${prospects.length} records. ${skipped} rows skipped (missing Name or Mobile).`);
       }
     } catch (err) {
-      setError(err.message || "Failed to upload prospects.");
+      setError(err.message || "Failed to upload sewadars.");
     } finally {
       setImporting(false);
       e.target.value = "";
@@ -558,13 +557,13 @@ function ProspectsDetailsPage() {
     try {
       const prospectDocs = await listAllProspects();
       if (prospectDocs.length === 0) {
-        setError("No prospects to export.");
+        setError("No sewadars to export.");
         return;
       }
       const callLogDocs = await listAllCallLogs();
       exportProspectsWorkbook(prospectDocs, callLogDocs);
     } catch (err) {
-      setError(err.message || "Failed to export prospects.");
+      setError(err.message || "Failed to export sewadars.");
     } finally {
       setExporting(false);
     }
@@ -585,7 +584,7 @@ function ProspectsDetailsPage() {
       setAddModalOpen(false);
       await loadProspects();
     } catch (err) {
-      setError(err.message || "Failed to add prospect.");
+      setError(err.message || "Failed to add sewadar.");
     } finally {
       setAddSubmitting(false);
     }
@@ -661,7 +660,7 @@ function ProspectsDetailsPage() {
                   d="M12 4v16m8-8H4"
                 />
               </svg>
-              Add Prospect
+              Add Sewadar
             </button>
             <input
               ref={fileInputRef}
@@ -729,29 +728,39 @@ function ProspectsDetailsPage() {
 
             const handleSubmitEditCall = async (e) => {
               e.preventDefault();
-              if (!editCallLog?.log?.$id) return;
               setCallFormSubmitting(true);
               setError("");
+              const formData = {
+                select: callForm.select,
+                callBack: callForm.callBack,
+                notInterest: callForm.notInterest,
+                departmentOfSewa: callForm.departmentOfSewa,
+                needToWork: callForm.needToWork,
+                notes1: callForm.notes1,
+                notes2: callForm.notes2,
+                notes3: callForm.notes3,
+                nominalListSelect: callForm.nominalListSelect,
+                visitSelect: callForm.visitSelect,
+                freeSewa: callForm.freeSewa,
+                attendance: callForm.attendance,
+                jathaRecord: callForm.jathaRecord,
+                jathaDetails: callForm.jathaDetails,
+              };
               try {
-                await updateCallLog(editCallLog.log.$id, {
-                  select: callForm.select,
-                  callBack: callForm.callBack,
-                  notInterest: callForm.notInterest,
-                  departmentOfSewa: callForm.departmentOfSewa,
-                  needToWork: callForm.needToWork,
-                  notes1: callForm.notes1,
-                  notes2: callForm.notes2,
-                  notes3: callForm.notes3,
-                  nominalListSelect: callForm.nominalListSelect,
-                  visitSelect: callForm.visitSelect,
-                  freeSewa: callForm.freeSewa,
-                  attendance: callForm.attendance,
-                  jathaRecord: callForm.jathaRecord,
-                  jathaDetails: callForm.jathaDetails,
-                });
+                if (editCallLog?.log?.$id) {
+                  await updateCallLog(editCallLog.log.$id, formData);
+                } else {
+                  await createCallLog({
+                    ...formData,
+                    prospectId: editCallLog.prospect.id,
+                    prospectName: editCallLog.prospect.name || "",
+                    submittedBy: "admin",
+                  });
+                  setProspectsWithCallLog((prev) => new Set([...prev, editCallLog.prospect.id]));
+                }
                 setEditCallLog(null);
               } catch (err) {
-                setError(err.message || "Failed to update calling form.");
+                setError(err.message || "Failed to save calling form.");
               } finally {
                 setCallFormSubmitting(false);
               }
@@ -826,7 +835,7 @@ function ProspectsDetailsPage() {
                         {prospect.name}
                       </h2>
                       <p className="text-xs text-slate-500">
-                        Calling Form — Edit
+                        {editCallLog?.log ? "Calling Form — Edit" : "Calling Form — New (Admin)"}
                       </p>
                     </div>
                     <span className="w-16" />
@@ -836,41 +845,7 @@ function ProspectsDetailsPage() {
                     onSubmit={handleSubmitEditCall}
                     className="flex-1 overflow-y-auto bg-sky-50/60 p-4 sm:p-6"
                   >
-                    {/* Compact sewadar banner */}
-                    <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
-                      <p className="mb-3 text-sm font-bold uppercase tracking-wider text-red-600">
-                        Sewadar Information
-                      </p>
-                      <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
-                        {[
-                          ["Name", prospect.name],
-                          ["Badge ID", prospect.badgeId],
-                          ["Badge Status", prospect.badgeStatus],
-                          ["Phone", prospect.phoneNumber],
-                          ["Blood Group", prospect.bloodGroup],
-                          ["Gender", prospect.gender],
-                          ["Age", prospect.age],
-                          ["Marital Status", prospect.maritalStatus],
-                        ].map(([label, val]) => (
-                          <div key={label}>
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                              {label}
-                            </p>
-                            <p className="mt-0.5 text-sm font-medium text-slate-800">
-                              {val || "-"}
-                            </p>
-                          </div>
-                        ))}
-                        <div className="col-span-2">
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                            Address
-                          </p>
-                          <p className="mt-0.5 text-sm text-slate-700">
-                            {prospect.address || "-"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                    <ProspectInfo prospect={prospect} />
 
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
@@ -1278,7 +1253,7 @@ function ProspectsDetailsPage() {
                     d="M4 6h16M4 10h16M4 14h16M4 18h16"
                   />
                 </svg>
-                <span className="truncate">All Prospects</span>
+                <span className="truncate">All Sewadars</span>
               </button>
               <button
                 type="button"
@@ -1321,7 +1296,7 @@ function ProspectsDetailsPage() {
                   onChange={(e) => setAssignedFilterUser(e.target.value)}
                   className="rounded-md border border-sky-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400"
                 >
-                  <option value="">All assigned prospects</option>
+                  <option value="">All assigned sewadars</option>
                   {assignedUsers.map((email) => (
                     <option key={email} value={email}>
                       {email}
@@ -1430,7 +1405,7 @@ function ProspectsDetailsPage() {
                     Add Sewadar Details
                   </h2>
                   <p className="mt-0.5 text-sm text-slate-500">
-                    Fill in the details for the new prospect.
+                    Fill in the details for the new sewadar.
                   </p>
                 </div>
                 <button
@@ -1663,18 +1638,6 @@ function ProspectsDetailsPage() {
                     <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-red-600">
                       Address
                     </p>
-                    <label className="mb-1 block text-xs font-medium text-slate-600">
-                      Residential Address
-                    </label>
-                    <textarea
-                      value={addForm.fullAddress}
-                      onChange={updateAddForm("fullAddress")}
-                      placeholder="Complete residential address"
-                      rows={3}
-                      className="w-full resize-y rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
                     <label className="mb-1 block text-xs font-medium text-slate-600">
                       Permanent Address
                     </label>
@@ -2095,13 +2058,13 @@ function ProspectsDetailsPage() {
                 className="text-lg font-semibold text-slate-900"
               >
                 {deleteConfirm.type === "single"
-                  ? "Delete prospect?"
-                  : `Delete ${deleteConfirm.count} prospect(s)?`}
+                  ? "Delete sewadar?"
+                  : `Delete ${deleteConfirm.count} sewadar(s)?`}
               </h2>
               <p className="mt-2 text-sm text-slate-600">
                 {deleteConfirm.type === "single"
-                  ? "This prospect will be removed permanently. This cannot be undone."
-                  : "These prospects will be removed permanently. This cannot be undone."}
+                  ? "This sewadar will be removed permanently. This cannot be undone."
+                  : "These sewadars will be removed permanently. This cannot be undone."}
               </p>
               <div className="mt-6 flex justify-end gap-3">
                 <button
@@ -2217,27 +2180,37 @@ function ProspectsDetailsPage() {
                         <span>{p.assignedTo || "-"}</span>
                         <span>•</span>
                         <span>{p.bloodGroup || "-"}</span>
+                        <span>•</span>
+                        {prospectsWithCallLog.has(p.id) ? (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700">
+                            <svg className="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
+                            Form Filled
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                            <svg className="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/></svg>
+                            Pending
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5">
                       {prospectsWithCallLog.has(p.id) && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => openCallLogForProspect(p)}
-                            className="rounded bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-200"
-                          >
-                            View Form
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openEditCallLogForProspect(p)}
-                            className="rounded bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-200"
-                          >
-                            Edit Form
-                          </button>
-                        </>
+                        <button
+                          type="button"
+                          onClick={() => openCallLogForProspect(p)}
+                          className="rounded bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-200"
+                        >
+                          View Form
+                        </button>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => openEditCallLogForProspect(p)}
+                        className="rounded bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-200"
+                      >
+                        Edit Form
+                      </button>
                       <button
                         type="button"
                         onClick={() => openDeleteConfirm(p.id)}
@@ -2303,6 +2276,9 @@ function ProspectsDetailsPage() {
                         Blood Group
                       </th>
                       <th className="px-4 py-3 font-semibold text-slate-700">
+                        Form Status
+                      </th>
+                      <th className="px-4 py-3 font-semibold text-slate-700">
                         Actions
                       </th>
                     </tr>
@@ -2365,20 +2341,29 @@ function ProspectsDetailsPage() {
                           {p.bloodGroup || "-"}
                         </td>
                         <td className="px-4 py-3">
+                          {prospectsWithCallLog.has(p.id) ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                              <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
+                              Filled
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                              <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/></svg>
+                              Pending
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
                           <ActionMenu
                             onView={
                               prospectsWithCallLog.has(p.id)
                                 ? () => openCallLogForProspect(p)
                                 : undefined
                             }
-                            onEdit={
-                              prospectsWithCallLog.has(p.id)
-                                ? () => openEditCallLogForProspect(p)
-                                : undefined
-                            }
+                            onEdit={() => openEditCallLogForProspect(p)}
                             onDelete={() => openDeleteConfirm(p.id)}
                             showViewForm={prospectsWithCallLog.has(p.id)}
-                            showEditForm={prospectsWithCallLog.has(p.id)}
+                            showEditForm={true}
                             showDeleteProspect={true}
                             isSaving={deleting}
                           />

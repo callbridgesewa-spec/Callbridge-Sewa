@@ -4,7 +4,7 @@ import { useVisitDataPage } from "../../hooks/useVisitDataPage";
 import { ActionMenu } from "../../components/ActionMenu";
 import { ProspectInfo } from "../../components/ProspectInfo";
 import { JathaDepartmentSelect } from "../../components/JathaDepartmentSelect";
-import { VisitOptionSelect } from "../../components/VisitOptionSelect";
+import { JathaAreaSelect } from "../../components/JathaAreaSelect";
 import { AssignDutySelect } from "../../components/AssignDutySelect";
 import { InchargeSelect } from "../../components/InchargeSelect";
 import { updateProspect } from "../../services/prospectsService";
@@ -115,7 +115,7 @@ function VisitDataPage() {
         <div>
           <h1 className="text-xl font-semibold text-slate-900">Visit Data</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Prospects marked &quot;Yes&quot; for Visit Select in submitted
+            Sewadars marked &quot;Yes&quot; for Visit Select in submitted
             calling forms
           </p>
         </div>
@@ -743,7 +743,7 @@ function VisitDataPage() {
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Visit Name
                 </label>
-                <VisitOptionSelect
+                <JathaAreaSelect
                   value={visitForm.visitName}
                   onChange={(e) => setVisitForm((f) => ({ ...f, visitName: e.target.value }))}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"

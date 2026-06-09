@@ -133,10 +133,6 @@ export function JathaListsManager({ embedded = false }) {
     removeArea,
     resetDepartments,
     resetAreas,
-    visitOptions,
-    addVisitOption,
-    removeVisitOption,
-    resetVisitOptions,
     assignDutyOptions,
     addAssignDutyOption,
     removeAssignDutyOption,
@@ -185,15 +181,6 @@ export function JathaListsManager({ embedded = false }) {
           onAdd={addDepartment}
           onRemove={removeDepartment}
           onReset={resetDepartments}
-          disabled={disabled}
-        />
-        <ListEditor
-          title="Visit Options"
-          description="badge-counts / visitOptions"
-          items={visitOptions}
-          onAdd={addVisitOption}
-          onRemove={removeVisitOption}
-          onReset={resetVisitOptions}
           disabled={disabled}
         />
         <ListEditor

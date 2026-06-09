@@ -176,6 +176,22 @@ function NominalRollSheet({ entries = [], title = "Nominal Roll Sewa Jatha" }) {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet("Nominal Roll");
 
+    // ── Logo: fetch from public folder and embed as base64 ───────────────────
+    let logoId = null;
+    try {
+      const res = await fetch("/nominal_logo.jpeg");
+      const blob = await res.blob();
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      logoId = wb.addImage({ base64, extension: "jpeg" });
+    } catch {
+      logoId = null; // export continues without the logo if fetch fails
+    }
+
     // ── Column widths (A = left margin gap, B-J = content) ───────────────────
     ws.columns = [
       { width: 2  }, // A – left margin (empty)
@@ -222,18 +238,31 @@ function NominalRollSheet({ entries = [], title = "Nominal Roll Sewa Jatha" }) {
     });
     ws.getRow(3).height = 22;
 
-    // ── Row 4: NOMINAL ROLL SEWA JATHA ───────────────────────────────────────
+    // ── Row 4: blank spacer between the two titles ───────────────────────────
     ws.mergeCells("B4:J4");
-    sc(ws.getCell("B4"), {
+    ws.getRow(4).height = 12;
+
+    // ── Row 5: NOMINAL ROLL SEWA JATHA ───────────────────────────────────────
+    ws.mergeCells("B5:J5");
+    sc(ws.getCell("B5"), {
       value: "NOMINAL ROLL SEWA JATHA",
       font: boldFont(11), alignment: center,
       border: { bottom: thin },
     });
-    ws.getRow(4).height = 18;
+    ws.getRow(5).height = 18;
 
-    // ── Row 5: blank spacer ──────────────────────────────────────────────────
-    ws.mergeCells("B5:J5");
-    ws.getRow(5).height = 6;
+    // ── Row 6: blank spacer ──────────────────────────────────────────────────
+    ws.mergeCells("B6:J6");
+    ws.getRow(6).height = 6;
+
+    // ── Logo: anchor over the top-left margin, spanning the title rows ───────
+    if (logoId !== null) {
+      ws.addImage(logoId, {
+        tl: { col: 0.1, row: 1.1 },        // near top-left (col A, row 2)
+        ext: { width: 70, height: 70 },
+        editAs: "oneCell",
+      });
+    }
 
     // ── Rows 7-10: meta block (B:C label | D:G value | H label | I:J value) ──
     const metaDefs = [

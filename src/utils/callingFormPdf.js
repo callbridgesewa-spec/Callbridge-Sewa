@@ -277,7 +277,6 @@ export function generateCallingFormPDF({ prospect = {}, doc = {}, form = {}, sub
     { label: "Guardian",        value: get("guardian"),                      span: 1 },
     { label: "Emergency",       value: get("emergencyContact"),              span: 1 },
     { label: "Dept Finalised",  value: get("DeptFinalisedName"),             span: 1 },
-    { label: "Residential Address", value: get("address"),                  span: 4 },
     { label: "Permanent Address",   value: get("permanentAddress"),          span: 4 },
     { label: "Locality",            value: get("locality"),                  span: 4 },
   ], y, 4);

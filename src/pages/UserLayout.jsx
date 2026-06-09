@@ -10,7 +10,7 @@ function UserLayout() {
     <AppLayout
       sidebarItems={sidebarItems}
       roleLabel="User"
-      brandLogo="N"
+      brandLogo="SMS"
     />
   )
 }

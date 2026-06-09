@@ -456,7 +456,7 @@ function Dashboard({ readOnly = false, setDashboardActions = null }) {
                 { key: 'permanent', label: 'Permanent' },
                 { key: 'elderly', label: 'Elderly' },
                 { key: 'sangat', label: 'Sangat' },
-                { key: 'newProspects', label: 'New Prospects' },
+                { key: 'newProspects', label: 'New Sewadars' },
               ].map(({ key, label }) => (
                 <label key={key} className="flex flex-col gap-1 rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2">
                   <span className="text-xs font-medium text-slate-600">{label}</span>

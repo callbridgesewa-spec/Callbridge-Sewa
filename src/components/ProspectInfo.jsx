@@ -13,7 +13,6 @@ export function ProspectInfo({ prospect = {}, doc = {} }) {
     prospect.badgeId || get("badgeId", "batchNumber", "batchnumber");
   const phone =
     prospect.phoneNumber || get("mobile", "phoneNumber", "mobileNumber");
-  const address = prospect.address || get("address");
 
   return (
     <>
@@ -120,14 +119,6 @@ export function ProspectInfo({ prospect = {}, doc = {} }) {
       </div>
 
       {/* address blocks */}
-      <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
-        <label className="mb-2 block text-sm font-bold text-slate-900 uppercase tracking-wide">
-          Residential Address
-        </label>
-        <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
-          {address}
-        </p>
-      </div>
       <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
         <label className="mb-2 block text-sm font-bold text-slate-900 uppercase tracking-wide">
           Permanent Address

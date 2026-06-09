@@ -9,6 +9,7 @@ const sidebarItems = [
   { label: 'Jatha Record', to: '/admin/jatha-record', icon: 'folder' },
   { label: 'Visit Data', to: '/admin/visit-data', icon: 'clipboard' },
   { label: 'Attendance', to: '/admin/attendance', icon: 'calendar' },
+  { label: 'Visit Stats', to: '/admin/visit-stats', icon: 'chart' },
 ]
 
 function AdminLayout() {
@@ -140,7 +141,7 @@ function AdminLayout() {
     <AppLayout
       sidebarItems={sidebarItems}
       roleLabel="Admin"
-      brandLogo="CS"
+      brandLogo="SMS"
       renderTopBarRight={renderTopBarRight}
       outletContext={{ setDashboardActions }}
     />
