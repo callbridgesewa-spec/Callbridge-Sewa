@@ -238,9 +238,13 @@ function NominalRollSheet({ entries = [], title = "Nominal Roll Sewa Jatha" }) {
     });
     ws.getRow(3).height = 22;
 
-    // ── Row 4: blank spacer between the two titles ───────────────────────────
+    // ── Row 4: editable sub-heading between the two titles ───────────────────
     ws.mergeCells("B4:J4");
-    ws.getRow(4).height = 12;
+    sc(ws.getCell("B4"), {
+      value: meta.headerBetweenTitles || "",
+      font: normFont(10), alignment: center,
+    });
+    ws.getRow(4).height = 16;
 
     // ── Row 5: NOMINAL ROLL SEWA JATHA ───────────────────────────────────────
     ws.mergeCells("B5:J5");
