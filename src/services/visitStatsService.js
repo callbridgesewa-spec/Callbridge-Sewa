@@ -1,5 +1,5 @@
 import { ID, Query } from 'appwrite'
-import { databases, APPWRITE_CONFIG } from './AppwriteClient'
+import { databases, APPWRITE_CONFIG } from './appwriteClient'
 
 function parseJathaDetails(raw) {
   if (Array.isArray(raw)) return raw
