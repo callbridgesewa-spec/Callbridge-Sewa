@@ -48,7 +48,7 @@ const TEMPLATE_COLUMNS = [
   { header: "Age",             field: "age",                   required: false },
   { header: "Blood Group",     field: "bloodgroup",            required: false },
   { header: "Aadhaar",         field: "aadhar",                required: false },
-  { header: "Guardian",        field: "guardian",              required: false },
+  { header: "Father's/Husband Name", field: "fatherHusbandName", required: false },
   { header: "Marital Status",  field: "maritalStatus",         required: false },
   { header: "Emergency",       field: "emergencyContact",      required: false },
   { header: "Address",         field: "address",               required: false },
@@ -197,11 +197,12 @@ function exportProspectsWorkbook(prospectDocs, callLogDocs) {
   const rows = prospectDocs.map((doc) => {
     const log = latestLog.get(String(doc.$id || "").trim());
 
-    const prospectCells = TEMPLATE_COLUMNS.map(({ field }) =>
-      field === "badgeId"
-        ? excelCellValue(doc.badgeId ?? doc.batchNumber)
-        : excelCellValue(doc[field])
-    );
+    const prospectCells = TEMPLATE_COLUMNS.map(({ field }) => {
+      if (field === "badgeId") return excelCellValue(doc.badgeId ?? doc.batchNumber);
+      // DB stores this as `guardian`; the template field is fatherHusbandName
+      if (field === "fatherHusbandName") return excelCellValue(doc.guardian ?? doc.fatherHusbandName);
+      return excelCellValue(doc[field]);
+    });
 
     const logCells = CALL_LOG_EXPORT_FIELDS.map(([field]) => {
       if (!log) return "";
@@ -2242,7 +2243,7 @@ function ProspectsDetailsPage() {
                 className="hidden overflow-x-auto overflow-y-visible md:block"
                 style={{ clipPath: "none" }}
               >
-                <table className="w-full min-w-[700px] border-collapse text-left text-sm">
+                <table className="w-full min-w-[1000px] border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50/80">
                       <th className="w-10 px-2 py-3">
@@ -2259,6 +2260,15 @@ function ProspectsDetailsPage() {
                       </th>
                       <th className="px-4 py-3 font-semibold text-slate-700">
                         Name of Sewadar/Sewadarni
+                      </th>
+                      <th className="px-4 py-3 font-semibold text-slate-700">
+                        Father&apos;s/Husband&apos;s Name
+                      </th>
+                      <th className="px-4 py-3 font-semibold text-slate-700">
+                        Gender
+                      </th>
+                      <th className="px-4 py-3 font-semibold text-slate-700">
+                        Age
                       </th>
                       <th className="px-4 py-3 font-semibold text-slate-700">
                         Address
@@ -2300,6 +2310,15 @@ function ProspectsDetailsPage() {
                         </td>
                         <td className="px-4 py-3 font-medium text-slate-900">
                           {p.name || "-"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          {p.fatherHusbandName || p.guardian || "-"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          {p.gender || "-"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          {p.age || "-"}
                         </td>
                         <td className="px-4 py-3 text-slate-600">
                           {p.address || "-"}

@@ -57,14 +57,15 @@ function VisitDataPage() {
   const [visitSuccess, setVisitSuccess] = useState("");
 
   const handleExport = () => {
-    const headers = ["Name", "Father/Husband Name", "Badge ID", "Phone", "Address", "Visit Name", "Assign Duty", "Visit Dept", "Incharge", "Submitted By", "Date"];
+    const headers = ["Name", "Father's/Husband Name", "Gender", "Age", "Badge ID", "Phone", "Address", "Visit Name", "Assign Duty", "Visit Dept", "Incharge", "Submitted By", "Date"];
     const rows = filteredEntries.map(({ prospect, log }) => [
-      prospect.name, prospect.fatherHusbandName, prospect.badgeId, prospect.phoneNumber, prospect.address,
+      prospect.name, prospect.fatherHusbandName || prospect.guardian || "", prospect.gender || "", prospect.age || "",
+      prospect.badgeId, prospect.phoneNumber, prospect.address,
       prospect.visitName || "", prospect.assignDuty || "", prospect.visitDept || "", prospect.inchargeName || "",
       log.submittedBy, log.$createdAt ? new Date(log.$createdAt).toLocaleDateString() : "",
     ]);
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    ws["!cols"] = [22, 22, 12, 14, 28, 18, 18, 14, 16, 24, 12].map((w) => ({ wch: w }));
+    ws["!cols"] = [22, 22, 8, 6, 12, 14, 28, 18, 18, 14, 16, 24, 12].map((w) => ({ wch: w }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Visit Data");
     XLSX.writeFile(wb, `visit_data_${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -189,7 +190,7 @@ function VisitDataPage() {
                         {prospect.name || "-"}
                       </p>
                       <p className="mt-0.5 truncate text-xs text-slate-500">
-                        Father/Husband: {prospect.fatherHusbandName || "-"}
+                        Father&apos;s/Husband: {prospect.fatherHusbandName || prospect.guardian || "-"}
                       </p>
                       <p className="mt-0.5 truncate text-xs text-slate-600">
                         {prospect.address || "-"}
@@ -235,11 +236,13 @@ function VisitDataPage() {
               className="hidden md:block overflow-x-auto overflow-y-visible"
               style={{ clipPath: "none" }}
             >
-              <table className="w-full min-w-[800px] border-collapse text-left text-sm">
+              <table className="w-full min-w-[940px] border-collapse text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
                     <th className="px-4 py-3 font-semibold text-slate-700">Name</th>
-                    <th className="px-4 py-3 font-semibold text-slate-700">Father/Husband</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">Father&apos;s/Husband Name</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">Gender</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">Age</th>
                     <th className="px-4 py-3 font-semibold text-slate-700">Badge ID</th>
                     <th className="px-4 py-3 font-semibold text-slate-700">Phone</th>
                     <th className="px-4 py-3 font-semibold text-slate-700">Visit Name</th>
@@ -259,7 +262,9 @@ function VisitDataPage() {
                         className="border-b border-slate-100 hover:bg-slate-50/50"
                       >
                         <td className="px-4 py-3 font-medium text-slate-900">{prospect.name || "-"}</td>
-                        <td className="px-4 py-3 text-slate-600">{prospect.fatherHusbandName || "-"}</td>
+                        <td className="px-4 py-3 text-slate-600">{prospect.fatherHusbandName || prospect.guardian || "-"}</td>
+                        <td className="px-4 py-3 text-slate-600">{prospect.gender || "-"}</td>
+                        <td className="px-4 py-3 text-slate-600">{prospect.age || "-"}</td>
                         <td className="px-4 py-3 text-slate-600">{prospect.badgeId || "-"}</td>
                         <td className="px-4 py-3 text-slate-600">
                           {toTelHref(prospect.phoneNumber) ? (
@@ -357,7 +362,7 @@ function VisitDataPage() {
                   <div className="grid grid-cols-2 gap-2 rounded-lg border border-sky-200 bg-sky-50 p-3">
                     {[
                       ["Visit Name",   viewEntry.prospect.visitName],
-                      ["Father/Husband Name", viewEntry.prospect.fatherHusbandName],
+                      ["Father's/Husband Name", viewEntry.prospect.fatherHusbandName || viewEntry.prospect.guardian],
                       ["Assign Duty",  viewEntry.prospect.assignDuty],
                       ["Department",   viewEntry.prospect.visitDept],
                       ["Incharge",     viewEntry.prospect.inchargeName],

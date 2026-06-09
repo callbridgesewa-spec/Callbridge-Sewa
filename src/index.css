@@ -87,4 +87,23 @@ body {
     page-break-after: always;
     break-after: page;
   }
+
+  /* Fixed outer boundary that repeats on every printed page (incl. signature-only pages) */
+  .printable .print-page-frame {
+    display: block !important;
+    visibility: visible !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 3px solid #0f172a;
+    pointer-events: none;
+    z-index: 9999;
+  }
+}
+
+/* Frame is print-only; hidden on screen */
+.print-page-frame {
+  display: none;
 }

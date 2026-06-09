@@ -448,11 +448,20 @@ function UserDashboard() {
                 className="hidden overflow-x-auto overflow-y-visible md:block"
                 style={{ clipPath: "none" }}
               >
-                <table className="w-full min-w-[700px] border-collapse text-left text-sm">
+                <table className="w-full min-w-[900px] border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50/80">
                       <th className="px-4 py-3 font-semibold text-slate-700">
                         Name of Sewadar/Sewadarni
+                      </th>
+                      <th className="px-4 py-3 font-semibold text-slate-700">
+                        Father&apos;s/Husband&apos;s Name
+                      </th>
+                      <th className="px-4 py-3 font-semibold text-slate-700">
+                        Gender
+                      </th>
+                      <th className="px-4 py-3 font-semibold text-slate-700">
+                        Age
                       </th>
                       <th className="px-4 py-3 font-semibold text-slate-700">
                         Address
@@ -483,6 +492,15 @@ function UserDashboard() {
                         >
                           <td className="px-4 py-3 font-medium text-slate-900">
                             {p.name || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-slate-600">
+                            {p.fatherHusbandName || p.guardian || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-slate-600">
+                            {p.gender || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-slate-600">
+                            {p.age || "-"}
                           </td>
                           <td className="px-4 py-3 text-slate-600">
                             {p.address || "-"}

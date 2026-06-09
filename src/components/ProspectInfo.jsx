@@ -86,7 +86,7 @@ export function ProspectInfo({ prospect = {}, doc = {} }) {
         </div>
         <div>
           <label className="mb-1 block text-[10px] font-medium uppercase text-slate-500">
-            Guardian/Father Name
+            Father&apos;s/Husband Name
           </label>
           <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm">
             {prospect.guardian || get("guardian", "fatherHusbandName")}

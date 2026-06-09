@@ -414,6 +414,9 @@ function NominalRollSheet({ entries = [], title = "Nominal Roll Sewa Jatha" }) {
       className="space-y-4 printable"
       style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
     >
+      {/* Print-only border frame — repeats the outer boundary on every printed page */}
+      <div className="print-page-frame" aria-hidden="true" />
+
       {/* ── Screen-only toolbar ── */}
       <div className="print:hidden flex flex-col gap-3 rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -607,7 +610,7 @@ function NominalRollSheet({ entries = [], title = "Nominal Roll Sewa Jatha" }) {
           </div>
 
           {/* ── Inner scroll wrapper — desktop + print only ── */}
-          <div className="hidden md:block print:block min-w-[960px] text-[10px] text-slate-900 sm:min-w-[1000px] sm:text-[11px] print:min-w-0 print:w-full print:text-[10px] print:border-4 print:border-slate-900" style={{ paddingLeft: '0.5cm' }}>
+          <div className="hidden md:block print:block min-w-[960px] text-[10px] text-slate-900 sm:min-w-[1000px] sm:text-[11px] print:min-w-0 print:w-full print:text-[10px]" style={{ paddingLeft: '0.5cm' }}>
 
             {/* ══ HEADER — first page only ══ */}
             {idx === 0 && (

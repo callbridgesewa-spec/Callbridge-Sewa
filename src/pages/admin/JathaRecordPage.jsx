@@ -127,7 +127,7 @@ function JathaRecordPage() {
       return [
         idx + 1,
         clean(prospect.name),
-        clean(prospect.fatherHusbandName),
+        clean(prospect.fatherHusbandName || prospect.guardian),
         clean(prospect.gender),
         clean(prospect.age),
         clean(prospect.aadhar),
@@ -313,6 +313,9 @@ function JathaRecordPage() {
                         {prospect.name || "-"}
                       </p>
                       <p className="mt-0.5 truncate text-xs text-slate-600">
+                        F/H: {prospect.fatherHusbandName || prospect.guardian || "-"}
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-slate-600">
                         {prospect.address || "-"}
                       </p>
                       <p className="mt-0.5 text-xs text-slate-600">
@@ -349,11 +352,20 @@ function JathaRecordPage() {
               className="hidden md:block overflow-x-auto overflow-y-visible"
               style={{ clipPath: "none" }}
             >
-              <table className="w-full min-w-[800px] border-collapse text-left text-sm">
+              <table className="w-full min-w-[1080px] border-collapse text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
                     <th className="px-4 py-3 font-semibold text-slate-700">
                       Name
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">
+                      Father&apos;s/Husband Name
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">
+                      Gender
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">
+                      Age
                     </th>
                     <th className="px-4 py-3 font-semibold text-slate-700">
                       Badge ID
@@ -391,6 +403,15 @@ function JathaRecordPage() {
                       >
                         <td className="px-4 py-3 font-medium text-slate-900">
                           {prospect.name || "-"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          {prospect.fatherHusbandName || prospect.guardian || "-"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          {prospect.gender || "-"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          {prospect.age || "-"}
                         </td>
                         <td className="px-4 py-3 text-slate-600">
                           {prospect.badgeId || "-"}

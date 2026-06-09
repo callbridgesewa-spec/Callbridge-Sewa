@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import * as XLSX from "xlsx";
 import { useJathaData } from "../../hooks/useJathaData";
 import {
   computeVisitStats,
@@ -8,6 +9,21 @@ import {
 
 function VisitStatsPage() {
   const { entries, loading: entriesLoading } = useJathaData(true);
+
+  // Lookup: badgeId -> { fatherHusband, gender, age } (from live jatha entries)
+  const detailsByBadgeId = useMemo(() => {
+    const map = new Map();
+    entries.forEach(({ prospect }) => {
+      const badge = String(prospect?.badgeId || "").trim();
+      if (!badge || badge === "-" || map.has(badge)) return;
+      map.set(badge, {
+        fatherHusband: prospect.fatherHusbandName || prospect.guardian || "-",
+        gender: prospect.gender || "-",
+        age: prospect.age || "-",
+      });
+    });
+    return map;
+  }, [entries]);
 
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsError, setStatsError] = useState("");
@@ -30,6 +46,37 @@ function VisitStatsPage() {
       }
     })();
   }, [statsLoaded]);
+
+  const handleExport = () => {
+    const headers = [
+      "SR.", "Badge ID", "Name", "Father's/Husband Name", "Gender", "Age",
+      "Bhati Count", "Bhati %", "Beas Count", "Beas %",
+      "Other Major Centres Count", "Other Major Centres %", "Total Visits",
+    ];
+    const rows = visitStats.map((stat, i) => {
+      const d = detailsByBadgeId.get(stat.badgeId) || {};
+      return [
+        i + 1,
+        stat.badgeId || "",
+        stat.prospectName || "",
+        d.fatherHusband || "-",
+        d.gender || "-",
+        d.age || "-",
+        stat.bhatiCount || 0,
+        stat.bhatiPercentage || 0,
+        stat.beasCount || 0,
+        stat.beasPercentage || 0,
+        stat.otherCount || 0,
+        stat.otherPercentage || 0,
+        stat.totalVisits || 0,
+      ];
+    });
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws["!cols"] = [6, 12, 24, 24, 8, 6, 12, 10, 12, 10, 18, 14, 12].map((w) => ({ wch: w }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Visit Stats");
+    XLSX.writeFile(wb, `visit_stats_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
 
   const handleComputeAndSave = async () => {
     setStatsLoading(true);
@@ -57,14 +104,24 @@ function VisitStatsPage() {
             Jatha visit counts and percentages per centre, grouped by badge ID
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleComputeAndSave}
-          disabled={statsLoading || entriesLoading || entries.length === 0}
-          className="shrink-0 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
-        >
-          {statsLoading ? "Computing…" : "Recompute & Save"}
-        </button>
+        <div className="flex shrink-0 gap-2">
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={statsLoading || visitStats.length === 0}
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+          >
+            Export Excel
+          </button>
+          <button
+            type="button"
+            onClick={handleComputeAndSave}
+            disabled={statsLoading || entriesLoading || entries.length === 0}
+            className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+          >
+            {statsLoading ? "Computing…" : "Recompute & Save"}
+          </button>
+        </div>
       </header>
 
       <div className="rounded-lg bg-white p-4 shadow-sm">
@@ -96,6 +153,11 @@ function VisitStatsPage() {
                   <th className="px-3 py-3 font-semibold text-slate-700">SR.</th>
                   <th className="px-3 py-3 font-semibold text-slate-700">Badge ID</th>
                   <th className="px-3 py-3 font-semibold text-slate-700">Name</th>
+                  <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">
+                    Father&apos;s/Husband Name
+                  </th>
+                  <th className="px-3 py-3 font-semibold text-slate-700">Gender</th>
+                  <th className="px-3 py-3 font-semibold text-slate-700">Age</th>
                   <th className="px-3 py-3 text-center font-semibold text-slate-700">Bhati</th>
                   <th className="px-3 py-3 text-center font-semibold text-slate-700">Beas</th>
                   <th className="px-3 py-3 text-center font-semibold text-slate-700 whitespace-nowrap">
@@ -113,6 +175,15 @@ function VisitStatsPage() {
                     <td className="px-3 py-2 text-slate-500">{i + 1}</td>
                     <td className="px-3 py-2 font-medium text-slate-900">{stat.badgeId}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-slate-700">{stat.prospectName}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-slate-700">
+                      {detailsByBadgeId.get(stat.badgeId)?.fatherHusband || "-"}
+                    </td>
+                    <td className="px-3 py-2 text-slate-700">
+                      {detailsByBadgeId.get(stat.badgeId)?.gender || "-"}
+                    </td>
+                    <td className="px-3 py-2 text-slate-700">
+                      {detailsByBadgeId.get(stat.badgeId)?.age || "-"}
+                    </td>
                     <td className="px-3 py-2 text-center text-slate-700">
                       {stat.bhatiCount > 0 ? (
                         <>

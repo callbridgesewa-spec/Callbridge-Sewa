@@ -229,14 +229,16 @@ function AttendancePage() {
 
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Attendance Register", {
-        views: [{ state: "frozen", xSplit: 7, ySplit: 1 }],
+        views: [{ state: "frozen", xSplit: 9, ySplit: 1 }],
       });
       worksheet.properties.defaultRowHeight = 22;
       worksheet.columns = [
         { header: "SR. No.",             key: "serial",            width: 9  },
         { header: "Name",                key: "name",              width: 24 },
         { header: "Badge ID",            key: "badgeId",           width: 14 },
-        { header: "Father/Husband Name", key: "fatherHusbandName", width: 22 },
+        { header: "Father's/Husband Name", key: "fatherHusbandName", width: 22 },
+        { header: "Gender",              key: "gender",            width: 8  },
+        { header: "Age",                 key: "age",               width: 6  },
         { header: "Phone",               key: "phoneNumber",       width: 14 },
         { header: "Address",             key: "address",           width: 28 },
         { header: "Attendance %",        key: "pct",               width: 14 },
@@ -261,7 +263,7 @@ function AttendancePage() {
         cell.border = thinBorder;
         cell.fill = {
           type: "pattern", pattern: "solid",
-          fgColor: { argb: colNum <= 7 ? "FFD9EAD3" : "FFFFF2CC" },
+          fgColor: { argb: colNum <= 9 ? "FFD9EAD3" : "FFFFF2CC" },
         };
       });
 
@@ -280,7 +282,9 @@ function AttendancePage() {
           serial:            index + 1,
           name:              prospect.name              || "-",
           badgeId:           prospect.badgeId           || "-",
-          fatherHusbandName: prospect.fatherHusbandName || "-",
+          fatherHusbandName: prospect.fatherHusbandName || prospect.guardian || "-",
+          gender:            prospect.gender            || "-",
+          age:               prospect.age               || "-",
           phoneNumber:       prospect.phoneNumber       || "-",
           address:           prospect.address           || "-",
           pct,
@@ -289,7 +293,7 @@ function AttendancePage() {
 
         dates.forEach((date, di) => {
           const status = groupStatusOnDate({ ids }, date);
-          const cell = row.getCell(di + 8);
+          const cell = row.getCell(di + 10);
           cell.value = status === "Present" ? "PRESENT" : status === "Leave" ? "LEAVE" : "";
           const style = statusStyles[status];
           if (style) {
@@ -300,15 +304,16 @@ function AttendancePage() {
 
         row.eachCell({ includeEmpty: true }, (cell, colNum) => {
           cell.border = thinBorder;
+          const centerMeta = colNum === 1 || colNum === 5 || colNum === 6 || colNum === 9;
           cell.alignment = {
-            horizontal: colNum === 1 || colNum === 7 ? "center" : colNum <= 7 ? "left" : "center",
+            horizontal: centerMeta ? "center" : colNum <= 9 ? "left" : "center",
             vertical: "middle",
           };
-          if (colNum <= 7 && !cell.font?.bold) cell.font = { name: "Arial", size: 10 };
+          if (colNum <= 9 && !cell.font?.bold) cell.font = { name: "Arial", size: 10 };
         });
       });
 
-      worksheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: dates.length + 7 } };
+      worksheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: dates.length + 9 } };
       const buffer = await workbook.xlsx.writeBuffer();
       const fromLabel = fromDate || "all";
       const toLabel   = toDate   || "all";
@@ -420,6 +425,12 @@ function AttendancePage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="font-medium text-slate-900">{group.prospect.name || "-"}</p>
+                        <p className="mt-0.5 text-xs text-slate-600">
+                          F/H: {group.prospect.fatherHusbandName || group.prospect.guardian || "-"}
+                        </p>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {group.prospect.gender || "-"} · {group.prospect.age || "-"} yrs
+                        </p>
                         <p className="mt-0.5 text-xs text-slate-500">
                           {group.prospect.badgeId || "-"} · {group.prospect.phoneNumber || "-"}
                         </p>
@@ -445,11 +456,14 @@ function AttendancePage() {
 
             {/* Desktop table */}
             <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[820px] border-collapse text-left text-sm">
+              <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
                     <th className="px-4 py-3 font-semibold text-slate-700">SR. No.</th>
                     <th className="px-4 py-3 font-semibold text-slate-700">Name</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">Father&apos;s/Husband Name</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">Gender</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700">Age</th>
                     <th className="px-4 py-3 font-semibold text-slate-700">Badge ID</th>
                     <th className="px-4 py-3 font-semibold text-slate-700">Phone</th>
                     <th className="px-4 py-3 font-semibold text-slate-700">Attendance %</th>
@@ -465,6 +479,9 @@ function AttendancePage() {
                       <tr key={group.key} className="border-b border-slate-100 hover:bg-slate-50/50">
                         <td className="px-4 py-3 font-medium text-slate-900">{index + 1}</td>
                         <td className="px-4 py-3 font-medium text-slate-900">{group.prospect.name || "-"}</td>
+                        <td className="px-4 py-3 text-slate-600">{group.prospect.fatherHusbandName || group.prospect.guardian || "-"}</td>
+                        <td className="px-4 py-3 text-slate-600">{group.prospect.gender || "-"}</td>
+                        <td className="px-4 py-3 text-slate-600">{group.prospect.age || "-"}</td>
                         <td className="px-4 py-3 text-slate-600">{group.prospect.badgeId || "-"}</td>
                         <td className="px-4 py-3 text-slate-600">{group.prospect.phoneNumber || "-"}</td>
                         <td className="px-4 py-3">
