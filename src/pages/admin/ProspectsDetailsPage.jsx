@@ -38,29 +38,7 @@ const SEARCH_BY_OPTIONS = [
 ];
 
 // --- Fixed template columns ---
-const TEMPLATE_COLUMNS = [
-  { header: "Name",            field: "fullName",              required: true  },
-  { header: "Mobile",          field: "mobile",                required: true  },
-  { header: "Badge ID",        field: "badgeId",               required: false },
-  { header: "Badge Status",    field: "badgeStatus",           required: false },
-  { header: "Gender",          field: "gender",                required: false },
-  { header: "DOB",             field: "dateOfBirth",           required: false },
-  { header: "Age",             field: "age",                   required: false },
-  { header: "Blood Group",     field: "bloodgroup",            required: false },
-  { header: "Aadhaar",         field: "aadhar",                required: false },
-  { header: "Father's/Husband Name", field: "fatherHusbandName", required: false },
-  { header: "Marital Status",  field: "maritalStatus",         required: false },
-  { header: "Emergency",       field: "emergencyContact",      required: false },
-  { header: "Address",         field: "address",               required: false },
-  { header: "Perm Address",    field: "permanentAddress",      required: false },
-  { header: "Locality",        field: "locality",              required: false },
-  { header: "Dept Name",       field: "DeptFinalisedName",     required: false },
-  { header: "Namdaan DOI",     field: "NamdaanDOI",            required: false },
-  { header: "Namdaan Init",    field: "namdaanInitiated",      required: false },
-  { header: "Init By",         field: "NamdaanInitiationBy",   required: false },
-  { header: "Init Place",      field: "NamdaanInitiationPlace",required: false },
-];
-
+git;
 
 /** Parse Excel file using the fixed template — exact header match, case-insensitive trim */
 function parseExcelWithTemplate(file) {
@@ -68,14 +46,21 @@ function parseExcelWithTemplate(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const data     = new Uint8Array(e.target.result);
+        const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: "array" });
-        const sheet    = workbook.Sheets[workbook.SheetNames[0]];
-        const raw      = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const raw = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-        if (!raw.length) { resolve({ prospects: [], skipped: 0 }); return; }
+        if (!raw.length) {
+          resolve({ prospects: [], skipped: 0 });
+          return;
+        }
 
-        const fileHeaders = raw[0].map((h) => String(h ?? "").trim().toLowerCase());
+        const fileHeaders = raw[0].map((h) =>
+          String(h ?? "")
+            .trim()
+            .toLowerCase(),
+        );
 
         // Map each template column to the index it sits at in the uploaded file
         const colIndex = {};
@@ -85,17 +70,23 @@ function parseExcelWithTemplate(file) {
         });
 
         // Check required columns are present
-        const missing = TEMPLATE_COLUMNS
-          .filter((c) => c.required && colIndex[c.field] === undefined)
-          .map((c) => c.header);
+        const missing = TEMPLATE_COLUMNS.filter(
+          (c) => c.required && colIndex[c.field] === undefined,
+        ).map((c) => c.header);
         if (missing.length) {
-          reject(new Error(`Missing required columns: ${missing.join(", ")}. Please use the provided template.`));
+          reject(
+            new Error(
+              `Missing required columns: ${missing.join(", ")}. Please use the provided template.`,
+            ),
+          );
           return;
         }
 
-        const dataRows = raw.slice(1).filter((row) =>
-          row.some((cell) => cell != null && String(cell).trim())
-        );
+        const dataRows = raw
+          .slice(1)
+          .filter((row) =>
+            row.some((cell) => cell != null && String(cell).trim()),
+          );
 
         let skipped = 0;
         const prospects = dataRows
@@ -103,21 +94,27 @@ function parseExcelWithTemplate(file) {
             const p = {};
             TEMPLATE_COLUMNS.forEach(({ field }) => {
               const idx = colIndex[field];
-              p[field] = idx !== undefined && row[idx] != null
-                ? String(row[idx]).trim()
-                : "";
+              p[field] =
+                idx !== undefined && row[idx] != null
+                  ? String(row[idx]).trim()
+                  : "";
             });
             return p;
           })
           .filter((p) => {
-            const hasName   = p.fullName?.trim();
+            const hasName = p.fullName?.trim();
             const hasMobile = p.mobile?.trim();
-            if (!hasName || !hasMobile) { skipped++; return false; }
+            if (!hasName || !hasMobile) {
+              skipped++;
+              return false;
+            }
             return true;
           });
 
         resolve({ prospects, skipped });
-      } catch (err) { reject(err); }
+      } catch (err) {
+        reject(err);
+      }
     };
     reader.onerror = () => reject(reader.error);
     reader.readAsArrayBuffer(file);
@@ -126,36 +123,40 @@ function parseExcelWithTemplate(file) {
 
 // --- Export: call log fields (compact headers, no redundant prospect name) ---
 const CALL_LOG_EXPORT_FIELDS = [
-  ["submittedBy",       "Submitted By"],
-  ["select",            "Select"],
-  ["callBack",          "Call Back"],
-  ["notInterest",       "Not Interest"],
-  ["departmentOfSewa",  "Dept of Sewa"],
-  ["needToWork",        "Need to Work"],
-  ["notes1",            "Notes 1"],
-  ["notes2",            "Notes 2"],
-  ["notes3",            "Notes 3"],
+  ["submittedBy", "Submitted By"],
+  ["select", "Select"],
+  ["callBack", "Call Back"],
+  ["notInterest", "Not Interest"],
+  ["departmentOfSewa", "Dept of Sewa"],
+  ["needToWork", "Need to Work"],
+  ["notes1", "Notes 1"],
+  ["notes2", "Notes 2"],
+  ["notes3", "Notes 3"],
   ["nominalListSelect", "Nominal List"],
-  ["visitSelect",       "Visit Select"],
-  ["freeSewa",          "Ferry Sewa"],
-  ["attendance",        "Attendance"],
-  ["jathaRecord",       "Jatha Record"],
-  ["jathaDetails",      "Jatha Details"],
+  ["visitSelect", "Visit Select"],
+  ["freeSewa", "Ferry Sewa"],
+  ["attendance", "Attendance"],
+  ["jathaRecord", "Jatha Record"],
+  ["jathaDetails", "Jatha Details"],
 ];
 
 // --- Export: visit assignment fields added to prospects ---
 const VISIT_EXPORT_FIELDS = [
-  ["visitName",      "Visit Name"],
-  ["assignDuty",     "Assign Duty"],
+  ["visitName", "Visit Name"],
+  ["assignDuty", "Assign Duty"],
   ["departmentName", "Visit Dept"],
-  ["inchargeName",   "Incharge"],
+  ["inchargeName", "Incharge"],
 ];
 
 function excelCellValue(value) {
   if (value === undefined || value === null) return "";
   if (value instanceof Date) return value.toISOString();
   if (typeof value === "object") {
-    try { return JSON.stringify(value); } catch { return String(value); }
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
   }
   return String(value);
 }
@@ -163,7 +164,11 @@ function excelCellValue(value) {
 function formatJathaDetails(raw) {
   let parsed = raw;
   if (typeof raw === "string" && raw.trim()) {
-    try { parsed = JSON.parse(raw); } catch { return excelCellValue(raw); }
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return excelCellValue(raw);
+    }
   }
   if (!Array.isArray(parsed) || !parsed.length) return excelCellValue(raw);
   return parsed
@@ -198,9 +203,11 @@ function exportProspectsWorkbook(prospectDocs, callLogDocs) {
     const log = latestLog.get(String(doc.$id || "").trim());
 
     const prospectCells = TEMPLATE_COLUMNS.map(({ field }) => {
-      if (field === "badgeId") return excelCellValue(doc.badgeId ?? doc.batchNumber);
+      if (field === "badgeId")
+        return excelCellValue(doc.badgeId ?? doc.batchNumber);
       // DB stores this as `guardian`; the template field is fatherHusbandName
-      if (field === "fatherHusbandName") return excelCellValue(doc.guardian ?? doc.fatherHusbandName);
+      if (field === "fatherHusbandName")
+        return excelCellValue(doc.guardian ?? doc.fatherHusbandName);
       return excelCellValue(doc[field]);
     });
 
@@ -218,7 +225,10 @@ function exportProspectsWorkbook(prospectDocs, callLogDocs) {
   ws["!cols"] = headers.map((h) => ({ wch: Math.max(h.length + 2, 14) }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Prospects");
-  XLSX.writeFile(wb, `sewadar_export_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  XLSX.writeFile(
+    wb,
+    `sewadar_export_${new Date().toISOString().slice(0, 10)}.xlsx`,
+  );
 }
 
 function calculateAgeFromDob(dateStr) {
@@ -542,7 +552,9 @@ function ProspectsDetailsPage() {
       );
       await loadProspects();
       if (skipped > 0) {
-        setError(`Uploaded ${prospects.length} records. ${skipped} rows skipped (missing Name or Mobile).`);
+        setError(
+          `Uploaded ${prospects.length} records. ${skipped} rows skipped (missing Name or Mobile).`,
+        );
       }
     } catch (err) {
       setError(err.message || "Failed to upload sewadars.");
@@ -757,7 +769,9 @@ function ProspectsDetailsPage() {
                     prospectName: editCallLog.prospect.name || "",
                     submittedBy: "admin",
                   });
-                  setProspectsWithCallLog((prev) => new Set([...prev, editCallLog.prospect.id]));
+                  setProspectsWithCallLog(
+                    (prev) => new Set([...prev, editCallLog.prospect.id]),
+                  );
                 }
                 setEditCallLog(null);
               } catch (err) {
@@ -836,7 +850,9 @@ function ProspectsDetailsPage() {
                         {prospect.name}
                       </h2>
                       <p className="text-xs text-slate-500">
-                        {editCallLog?.log ? "Calling Form — Edit" : "Calling Form — New (Admin)"}
+                        {editCallLog?.log
+                          ? "Calling Form — Edit"
+                          : "Calling Form — New (Admin)"}
                       </p>
                     </div>
                     <span className="w-16" />
@@ -1453,7 +1469,7 @@ function ProspectsDetailsPage() {
                       <option value="Permanent">Permanent</option>
                       <option value="Elderly">Elderly</option>
                       <option value="Sangat">Sangat</option>
-                      <option value="New Prospects">New Prospects</option>
+                      <option value="New Prospects">Open New Sewadar</option>
                     </select>
                   </div>
                   <div>
@@ -1763,10 +1779,10 @@ function ProspectsDetailsPage() {
             const handleDownload = () => {
               generateCallingFormPDF({
                 prospect,
-                doc:         prospect.raw || {},
-                form:        log,
+                doc: prospect.raw || {},
+                form: log,
                 submittedBy: log.submittedBy || "",
-                fileName:    `call_form_${prospect.badgeId || prospect.id}.pdf`,
+                fileName: `call_form_${prospect.badgeId || prospect.id}.pdf`,
               });
             };
 
@@ -2184,12 +2200,32 @@ function ProspectsDetailsPage() {
                         <span>•</span>
                         {prospectsWithCallLog.has(p.id) ? (
                           <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700">
-                            <svg className="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
+                            <svg
+                              className="h-2.5 w-2.5"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
                             Form Filled
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
-                            <svg className="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/></svg>
+                            <svg
+                              className="h-2.5 w-2.5"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
                             Pending
                           </span>
                         )}
@@ -2362,12 +2398,32 @@ function ProspectsDetailsPage() {
                         <td className="px-4 py-3">
                           {prospectsWithCallLog.has(p.id) ? (
                             <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                              <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
+                              <svg
+                                className="h-3 w-3"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
                               Filled
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                              <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/></svg>
+                              <svg
+                                className="h-3 w-3"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
                               Pending
                             </span>
                           )}

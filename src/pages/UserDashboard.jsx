@@ -10,6 +10,7 @@ import {
   listCallLogsForUser,
 } from "../services/callLogsService";
 import { ActionMenu } from "../components/ActionMenu";
+import { AddProspectModal } from "../components/AddProspectModal";
 import { JathaAreaSelect } from "../components/JathaAreaSelect";
 import { JathaDepartmentSelect } from "../components/JathaDepartmentSelect";
 import { ProspectInfo } from "../components/ProspectInfo";
@@ -75,6 +76,7 @@ function UserDashboard() {
   const [success, setSuccess] = useState("");
   const [userCallLogsByProspect, setUserCallLogsByProspect] = useState({});
   const [editingLogId, setEditingLogId] = useState(null);
+  const [addModalOpen, setAddModalOpen] = useState(false);
 
   const loadAssigned = useCallback(async () => {
     const email = user?.email;
@@ -349,6 +351,16 @@ function UserDashboard() {
               />
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setAddModalOpen(true)}
+            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md bg-slate-800 px-3 py-2 text-xs font-medium text-white transition hover:bg-slate-900 sm:rounded-lg sm:text-sm"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add Sewadar
+          </button>
         </div>
 
         {error && (
@@ -979,6 +991,13 @@ function UserDashboard() {
           </div>
         </div>
       )}
+
+      <AddProspectModal
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onCreated={loadAssigned}
+        assignedTo={user?.email || ""}
+      />
     </div>
   );
 }
