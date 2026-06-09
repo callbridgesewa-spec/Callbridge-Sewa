@@ -31,9 +31,9 @@ function LoginPage() {
       <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-800 text-white">
-            <span className="text-xl font-semibold">CS</span>
+            <span className="text-base font-semibold">SMS</span>
           </div>
-          <h1 className="text-xl font-semibold text-slate-900">C.S for Sangat</h1>
+          <h1 className="text-xl font-semibold text-slate-900">Sewadar Management System</h1>
           <p className="mt-1 text-sm text-slate-500">Sign in to access your dashboard</p>
         </div>
 
@@ -105,7 +105,7 @@ function LoginPage() {
         </form>
 
         <p className="mt-6 text-center text-[11px] text-slate-400">
-          Internal C.S for Sangat dashboard. Access restricted to authorized staff only.
+          Internal Sewadar Management System dashboard. Access restricted to authorized staff only.
         </p>
       </div>
     </div>
