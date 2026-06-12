@@ -37,8 +37,7 @@ const SEARCH_BY_OPTIONS = [
   "Blood Group",
 ];
 
-// --- Fixed template columns ---
-git;
+
 
 /** Parse Excel file using the fixed template — exact header match, case-insensitive trim */
 function parseExcelWithTemplate(file) {
